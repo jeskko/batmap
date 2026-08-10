@@ -254,9 +254,13 @@ def _parse_record(text: str, i: int, n: int) -> tuple[LocMarker, int]:
     raw_names, i = _read_multi(text, i, n, "|")
     names = [_split_name_prefix(r, {"@": NAME_ORIG}) for r in raw_names]
 
-    # Field 6: authors, ','-separated
+    # Field 6: authors, ','-separated. An empty field (no authors given) still
+    # comes back from _read_multi as one empty-string subfield rather than
+    # zero -- it unconditionally reads one value before checking for the
+    # terminator -- so drop blanks here rather than downstream, or "no
+    # author" would render as one author literally named "".
     raw_authors, i = _read_multi(text, i, n, ",")
-    authors = [_split_name_prefix(r, _AUTHOR_FLAG_CHARS) for r in raw_authors]
+    authors = [_split_name_prefix(r, _AUTHOR_FLAG_CHARS) for r in raw_authors if r.strip()]
 
     # Field 7: timestamp
     i = _skip_ws(text, i, n)

@@ -19,6 +19,15 @@ the frontend just paints the map background color there instead of serving
 a "sea" tile image. If two continents' bounding boxes ever did overlap the
 same tile (they don't today, but nothing enforces it), an existing tile
 file is loaded and the new content painted on top rather than clobbered.
+
+A continent's bounding-box tiles aren't necessarily fully covered by its
+own image, though (Renardy in particular is tiny -- 168x86 native cells --
+so most of the tiles its bounding box touches are mostly empty margin).
+Freshly-created tiles are padded with `background`: a flat color for the
+regular color-map layer (matching the open-ocean color used elsewhere), or
+a small repeating pattern image for the ASCII/text layer (its own "~" sea
+glyph texture, so a small continent's padding matches the surrounding
+untiled ocean instead of showing through as a flat color block).
 """
 
 import math
@@ -36,6 +45,7 @@ def build_tiles_for_continent(
     cont_image: Image.Image,
     zoom: int,
     out_dir: Path,
+    background: Image.Image | tuple[int, int, int] = BACKGROUND_SEA_COLOR,
 ) -> int:
     """Composite one continent's pre-scaled image for one zoom level into
     the tile files it overlaps. Returns the number of tiles written."""
@@ -60,7 +70,7 @@ def build_tiles_for_continent(
 
             zoom_dir.mkdir(parents=True, exist_ok=True)
             tile_path = zoom_dir / f"{tx}.png"
-            _paste_onto_tile(tile_path, region, dst_pos)
+            _paste_onto_tile(tile_path, region, dst_pos, background)
             written += 1
 
     return written
@@ -93,11 +103,31 @@ def _crop_region(cont_image: Image.Image, cx: float, cy: float, tx: int, ty: int
     return region, (dst_x, dst_y)
 
 
-def _paste_onto_tile(tile_path: Path, region: Image.Image, dst_pos: tuple[int, int]) -> None:
+def _paste_onto_tile(
+    tile_path: Path,
+    region: Image.Image,
+    dst_pos: tuple[int, int],
+    background: Image.Image | tuple[int, int, int],
+) -> None:
     if tile_path.exists():
         tile = Image.open(tile_path).convert("RGB")
     else:
-        tile = Image.new("RGB", (TILE_DIM, TILE_DIM), BACKGROUND_SEA_COLOR)
+        tile = _new_background_tile(background)
 
     tile.paste(region, dst_pos)
     tile.save(tile_path)
+
+
+def _new_background_tile(background: Image.Image | tuple[int, int, int]) -> Image.Image:
+    """A fresh TILE_DIM x TILE_DIM canvas: a flat fill for a plain color, or
+    a small pattern image repeated to cover the canvas (see module
+    docstring)."""
+    if not isinstance(background, Image.Image):
+        return Image.new("RGB", (TILE_DIM, TILE_DIM), background)
+
+    tile = Image.new("RGB", (TILE_DIM, TILE_DIM))
+    bw, bh = background.size
+    for y in range(0, TILE_DIM, bh):
+        for x in range(0, TILE_DIM, bw):
+            tile.paste(background, (x, y))
+    return tile

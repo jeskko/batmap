@@ -58,6 +58,18 @@ def _glyph_tiles(scale: int, font_size: int, font_path: str) -> np.ndarray:
     return tiles
 
 
+def sea_glyph_tile(zoom: int, font_path: Path) -> Image.Image:
+    """The single (scale, scale) '~' Sea glyph tile for one ASCII zoom
+    level -- used by build.py to pad small continents' (e.g. Renardy's)
+    ASCII tiles with the same open-ocean texture the frontend already tiles
+    across untiled areas, instead of a flat color block (see tiles.py)."""
+    scale = round(zoom_to_scale(zoom))
+    font_size = FONT_SIZES[zoom]
+    tiles = _glyph_tiles(scale, font_size, str(font_path))
+    sea_index = INDEX_BY_CHAR["~"]
+    return Image.fromarray(tiles[sea_index], mode="RGB")
+
+
 def render_ascii_image(mapfile: MapFile, zoom: int, font_path: Path) -> Image.Image:
     """Render one continent's ASCII/text-map image for one supported zoom level."""
     scale = round(zoom_to_scale(zoom))

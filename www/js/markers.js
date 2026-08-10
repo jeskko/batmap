@@ -195,7 +195,9 @@ export async function initMarkers(map, worldInfo, ui) {
   for (const entry of entries) {
     entry.marker = L.marker(worldCellCenter(entry.x, entry.y), { icon: typeIcon(entry.type) })
       .bindPopup(entry.html)
-      .bindTooltip(entry.name, { permanent: true, direction: "right", offset: [8, 0], className: "loc-label" });
+      .bindTooltip(entry.name, {
+        permanent: true, direction: "right", offset: [8, 0], className: "loc-label", interactive: true,
+      });
     // Leaflet auto-opens a "permanent" tooltip the instant its marker is
     // actually attached to the map -- and MarkerClusterGroup defers that
     // attachment internally, so there's no reliable single point in our
@@ -206,7 +208,23 @@ export async function initMarkers(map, worldInfo, ui) {
     // be showing. This reacts to the actual symptom rather than guessing
     // at internal event ordering.
     entry.marker.on("tooltipopen", () => {
-      if (!wantsLabel(entry)) entry.marker.closeTooltip();
+      if (!wantsLabel(entry)) {
+        entry.marker.closeTooltip();
+        return;
+      }
+      // Make the label itself clickable, doing exactly what clicking the
+      // marker's own dot does. The tooltip's DOM element is reused across
+      // opens/closes (only its visibility toggles), but tooltipopen fires
+      // every time it's shown -- guard with a data attribute so the
+      // listener is attached at most once per element.
+      const el = entry.marker.getTooltip()?.getElement();
+      if (el && !el.dataset.locLabelClickBound) {
+        el.dataset.locLabelClickBound = "1";
+        el.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          entry.marker.openPopup();
+        });
+      }
     });
     markerEntries.set(entry.marker, entry);
     clusterGroup.addLayer(entry.marker);

@@ -102,7 +102,10 @@ def build(maputils_dir: Path, out_dir: Path, force: bool = False, with_ascii: bo
             ascii_tiles_dir.mkdir(parents=True, exist_ok=True)
             for zoom in ASCII_ZOOM_LEVELS:
                 ascii_image = ascii_render.render_ascii_image(mapfile, zoom, font_path)
-                n_ascii_tiles += tiles.build_tiles_for_continent(continent, ascii_image, zoom, ascii_tiles_dir)
+                sea_tile = ascii_render.sea_glyph_tile(zoom, font_path)
+                n_ascii_tiles += tiles.build_tiles_for_continent(
+                    continent, ascii_image, zoom, ascii_tiles_dir, background=sea_tile,
+                )
                 del ascii_image
 
         print(f"  {n_tiles} terrain tiles" + (f", {n_ascii_tiles} text tiles" if with_ascii else ""))
