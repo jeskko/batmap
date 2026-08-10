@@ -1,0 +1,49 @@
+MIT License
+
+Copyright (c) 2026 Jeskko Pupunen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+This license covers the code in this repository (utils/, www/*.html,
+www/js/, www/css/, Makefile, and related project files). It does NOT cover,
+and does not grant any rights to:
+
+  - www/img/batmud_logo2.png and www/img/wood2.jpg -- carried over from the
+    original BatMUD map site for visual continuity; these remain the
+    property of their respective owners and are not relicensed here.
+  - www/vendor/leaflet/ and www/vendor/markercluster/ -- third-party
+    libraries (Leaflet, Leaflet.markercluster) vendored as-is, each under
+    its own license included in its own subdirectory (BSD-2-Clause and MIT
+    respectively).
+  - BatMUD world map data (fetched at build time into extern/, and any
+    tiles/JSON generated from it into www/tiles/, www/tiles-ascii/, and
+    www/data/) -- this is not part of this repository and remains the
+    property of BAT ry and its contributing area builders, as credited
+    in-app ("Map data by BAT ry, Ggr, Slobber & Jeskko").
+
+See README.md for details.
+
+A note on authorship: this code was written almost entirely by an AI coding
+agent under human direction (see README.md). Whether, and to what extent,
+AI-generated content is protected by copyright is an unsettled question that
+is actively debated and varies by jurisdiction. This license is granted to
+the extent any copyright interest exists in this work; it is not a
+representation that such an interest exists.

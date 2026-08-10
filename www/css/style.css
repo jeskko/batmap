@@ -1,0 +1,399 @@
+:root {
+  --color-bg: #171310;
+  --color-header-bg: #0d0b09;
+  --color-accent: #d6553f;
+  --color-accent-dark: #a8402f;
+  --color-parchment: #efe3c8;
+  --color-parchment-dark: #ddccA0;
+  --color-text-dark: #2b2417;
+  --color-text-light: #f4ece0;
+  --color-sea: #3333aa; /* matches legend.py's "~" Sea terrain color, not a separate shade */
+  --color-border: rgba(0, 0, 0, 0.35);
+  --sidebar-width: 320px;
+  --header-height: 76px;
+  --footer-height: 34px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: inherit; }
+
+/* ---------- Header ---------- */
+
+.site-header {
+  height: var(--header-height);
+  flex: 0 0 auto;
+  background: var(--color-header-bg) url("../img/wood2.jpg") repeat-x;
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 0 1em;
+  box-shadow: 0 2px 8px var(--color-border);
+  z-index: 20;
+}
+
+.site-header .logo img {
+  display: block;
+  height: 56px;
+  width: auto;
+}
+
+.site-header .titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.site-header h1 {
+  font-size: 1.3em;
+  margin: 0;
+  text-shadow: 1px 1px 2px #000;
+}
+
+.site-header .subtitle {
+  margin: 0;
+  font-size: 0.8em;
+  color: var(--color-accent);
+  text-shadow: 1px 1px 1px #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button, #make-link {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--color-text-light);
+  border-radius: 0.4em;
+  padding: 0.5em 0.9em;
+  font-size: 0.85em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:hover, #make-link:hover {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.icon-button {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.icon-button span {
+  display: block;
+  height: 2px;
+  background: var(--color-text-light);
+  border-radius: 1px;
+}
+
+/* ---------- Layout ---------- */
+
+.layout {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+#map {
+  flex: 1 1 auto;
+  background: var(--color-sea);
+  min-width: 0;
+}
+
+.leaflet-container {
+  background: var(--color-sea);
+  font-family: inherit;
+}
+
+/* While the ASCII/text layer is both toggled on AND within its supported
+   zoom range, the empty-tile background (open ocean outside any
+   continent) switches from a flat color to a repeating tile of the same
+   "~" glyph the text layer itself uses at that exact zoom level --
+   map.js's setupAsciiLayerToggle() sets background-image directly (it
+   varies per zoom, ascii-sea-tile-{9,10,11}.png, so it can't be a single
+   static rule here); this only supplies the repeat/rendering behavior and
+   a solid-black fallback base. */
+#map.ascii-mode.leaflet-container {
+  background-color: #000;
+  background-repeat: repeat;
+  image-rendering: pixelated;
+}
+
+.load-error {
+  padding: 2em;
+  color: #900;
+  background: #fff;
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
+  background: linear-gradient(var(--color-parchment), var(--color-parchment-dark));
+  color: var(--color-text-dark);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 8px var(--color-border);
+  z-index: 10;
+}
+
+.sidebar-scroll {
+  overflow-y: auto;
+  padding: 0.75em;
+  flex: 1 1 auto;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5em 0.7em;
+  margin-bottom: 0.75em;
+  border: 1px solid var(--color-parchment-dark);
+  border-radius: 0.4em;
+  font-size: 0.95em;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.filter-group { margin-bottom: 1em; }
+
+.filter-group h3 {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.4em;
+  color: var(--color-text-dark);
+  opacity: 0.7;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+}
+
+.chip {
+  --chip-color: #888;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 0.3em 0.7em;
+  font-size: 0.8em;
+  cursor: pointer;
+  color: var(--color-text-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.chip::before {
+  content: "";
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: var(--chip-color);
+  flex: 0 0 auto;
+}
+
+.chip--all::before { display: none; }
+
+.chip.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent-dark);
+  color: #fff;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.9em;
+  cursor: pointer;
+  margin-bottom: 0.4em;
+}
+
+.toggle-row.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-hint {
+  font-size: 0.8em;
+  opacity: 0.65;
+}
+
+.location-list-group { flex: 1 1 auto; }
+
+.location-group.is-hidden { display: none; }
+
+.location-group h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+  margin: 0.8em 0 0.3em;
+}
+
+.location-group h4 .dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.loc-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0.3em;
+  padding: 0.3em 0.5em;
+  font-size: 0.85em;
+  cursor: pointer;
+  color: var(--color-text-dark);
+}
+
+.loc-item:hover { background: rgba(0, 0, 0, 0.08); }
+.loc-item.is-hidden { display: none; }
+
+/* ---------- Map markers ---------- */
+
+.loc-marker { background: none; border: none; }
+
+.loc-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+.loc-dot--tradelane {
+  width: 6px;
+  height: 6px;
+  border-width: 1px;
+  background: #cbd5e1;
+}
+
+/* Permanent name-label tooltip (old site's "MarkerWithLabel" look). */
+.leaflet-tooltip.loc-label {
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px dotted rgba(255, 255, 255, 0.6);
+  border-radius: 0.2em;
+  color: #fff;
+  font-size: 0.75em;
+  font-weight: bold;
+  padding: 1px 4px;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.leaflet-tooltip.loc-label::before { display: none; }
+
+.player-marker-icon {
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  background: #222;
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  flex: 0 0 var(--footer-height);
+  height: var(--footer-height);
+  background: var(--color-header-bg);
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1em;
+  font-size: 0.75em;
+  gap: 1em;
+}
+
+.cursor-readout {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copyrights {
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  bottom: calc(var(--footer-height) + 1em);
+  left: 50%;
+  transform: translateX(-50%) translateY(0.5em);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 0.6em 1.1em;
+  border-radius: 0.4em;
+  font-size: 0.85em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 860px) {
+  :root { --header-height: 64px; }
+
+  .icon-button { display: flex; }
+
+  .site-header .subtitle { display: none; }
+  .site-header .logo img { height: 40px; }
+  #make-link { padding: 0.5em 0.6em; font-size: 0.75em; }
+
+  .sidebar {
+    position: fixed;
+    top: var(--header-height);
+    bottom: var(--footer-height);
+    left: 0;
+    width: min(85vw, 340px);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.is-open { transform: translateX(0); }
+
+  .copyrights { display: none; }
+}

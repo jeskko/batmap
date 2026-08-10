@@ -1,0 +1,12 @@
+# Local Makefile overrides. Copy to config.mk (gitignored) and adjust as
+# needed -- mirrors the pattern extern/maputils itself uses (config.mak).
+#
+# cp config.mk.example config.mk
+
+#WWW_DIR = /var/www/batmap
+#TILES_DIR = $(WWW_DIR)/tiles
+#DATA_DIR = $(WWW_DIR)/data
+
+#MAPUTILS_DIR = extern/maputils
+#BUILD_DIR = build
+#PYTHON = python3

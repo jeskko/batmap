@@ -1,0 +1,21 @@
+# External data checkout (Mercurial repo, fetched by `make fetch-data`)
+/extern/
+
+# The previous (PHP + Google Maps) version of this site, kept locally for
+# reference only -- its real history lives in its own Mercurial repo at
+# https://tnsp.org/hg/batmud/gmap2/, not here
+/old/
+
+# Build output (tiles + generated JSON), and generated frontend data
+/build/
+/www/tiles/
+/www/tiles-ascii/
+/www/data/
+
+# Local Makefile overrides
+/config.mk
+
+# Python
+/.venv-utils/
+__pycache__/
+*.pyc

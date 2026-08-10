@@ -1,0 +1,90 @@
+"""
+Terrain legend: map character -> (name, RGB color).
+
+Ported from the `mapPieces[]` table in extern/maputils/src/libmaputils.c,
+which is the canonical/richer legend (it also carries human-readable terrain
+names, useful for a UI legend/tooltip) -- as opposed to the smaller ad-hoc
+palette that was duplicated directly inside the old tools/makegmaps.php.
+
+Where libmaputils.c lists more than one entry for the same character (e.g.
+old-format aliases guarded by #ifdef SECRET_MAP_DATA_FORMAT, or fallback
+entries keyed by `mapchar` rather than a literal character), only the
+entries that apply to the plain, non-secret .map format are kept here.
+
+Two exceptions, deliberately NOT matching libmaputils.c: '~' (Sea) and 'l'
+(Lake) instead use the colors from tools/makegmaps.php's own $mapPalette,
+because that's what the actual old live site rendered and what people
+remember -- libmaputils.c's values for these two happen to invert which of
+the two reads as the darker/lighter blue, which showed up as a visibly
+"swapped" look once compared side by side with the original.
+"""
+
+from typing import NamedTuple
+
+
+class TerrainInfo(NamedTuple):
+    name: str
+    color: tuple[int, int, int]
+
+
+# char -> TerrainInfo
+MAP_LEGEND: dict[str, TerrainInfo] = {
+    "!": TerrainInfo("Mountain Peak",    (0xcc, 0xff, 0xff)),
+    "#": TerrainInfo("Ruins",            (0x88, 0x88, 0x88)),
+    "%": TerrainInfo("Special Location", (0xff, 0xff, 0xff)),
+    "+": TerrainInfo("Crossing",         (0x33, 0x33, 0x33)),
+    "-": TerrainInfo("Road",             (0x33, 0x33, 0x33)),
+    "|": TerrainInfo("Road",             (0x33, 0x33, 0x33)),
+    "/": TerrainInfo("Road",             (0x33, 0x33, 0x33)),
+    "\\": TerrainInfo("Road",            (0x33, 0x33, 0x33)),
+    ".": TerrainInfo("Plains",           (0x55, 0x92, 0x00)),
+    "=": TerrainInfo("Bridge",           (0x33, 0x33, 0x33)),
+    "?": TerrainInfo("Scenic Location",  (0xff, 0xff, 0xff)),
+    "@": TerrainInfo("Flowing Lava",     (0xff, 0x99, 0x3f)),
+    "C": TerrainInfo("Player City",      (0x88, 0x88, 0x88)),
+    "F": TerrainInfo("Deep Forest",      (0x00, 0x88, 0x00)),
+    "H": TerrainInfo("Highlands",        (0x66, 0x3f, 0x00)),
+    "L": TerrainInfo("Lava Lake",        (0xff, 0x50, 0x00)),
+    "R": TerrainInfo("Deep River",       (0x33, 0x66, 0xff)),
+    "V": TerrainInfo("Volcano",          (0xff, 0x33, 0x00)),
+    "^": TerrainInfo("Mountain",         (0x71, 0x82, 0x92)),
+    "b": TerrainInfo("Beach",            (0xcf, 0xc4, 0xa5)),
+    "c": TerrainInfo("City",             (0x88, 0x88, 0x88)),
+    "d": TerrainInfo("Desert",           (0xee, 0xaa, 0x22)),
+    "f": TerrainInfo("Forest",           (0x00, 0xb6, 0x00)),
+    "h": TerrainInfo("Hills",            (0x99, 0x66, 0x00)),
+    "i": TerrainInfo("Ice",              (0xee, 0xee, 0xff)),
+    "j": TerrainInfo("Jungle",           (0x13, 0x96, 0x36)),
+    "l": TerrainInfo("Lake",             (0x64, 0x64, 0xff)),
+    "r": TerrainInfo("River",            (0x66, 0x99, 0xff)),
+    "s": TerrainInfo("Swamp",            (0x9d, 0xa8, 0x0a)),
+    "t": TerrainInfo("Tundra",           (0x61, 0xc3, 0xa2)),
+    "v": TerrainInfo("Valley",           (0x22, 0xdd, 0x22)),
+    "w": TerrainInfo("Waterfall",        (0x77, 0xaa, 0xff)),
+    "x": TerrainInfo("Badlands",         (0x8a, 0x83, 0x60)),
+    "y": TerrainInfo("Fields",           (0xa7, 0xcc, 0x14)),
+    "z": TerrainInfo("Shore",            (0xa7, 0xcc, 0x14)),
+    ",": TerrainInfo("Muddy Trail",      (0x8c, 0x57, 0x38)),
+    "&": TerrainInfo("Monster",          (0xff, 0x00, 0x00)),
+    "S": TerrainInfo("Shallows",         (0x44, 0xcc, 0xcc)),
+    "~": TerrainInfo("Sea",              (0x33, 0x33, 0xaa)),
+}
+
+# Color for characters that appear in a .map file but aren't in MAP_LEGEND
+# (shouldn't normally happen with well-formed data; fall back to black so
+# gaps are visually obvious rather than silently wrong).
+UNKNOWN_COLOR: tuple[int, int, int] = (0, 0, 0)
+
+# The "open ocean" background fill used between/around continents when
+# compositing tiles, and by the frontend as the map container's background
+# color. Deliberately the same value as '~' Sea above (which, per the note
+# above, is itself makegmaps.php's original navy) rather than a second,
+# slightly-off "sea blue" -- using two different blues here reads as a
+# visible seam where a continent's own coastline meets the surrounding
+# empty tile background.
+BACKGROUND_SEA_COLOR: tuple[int, int, int] = MAP_LEGEND["~"].color
+
+
+def color_for(char: str) -> tuple[int, int, int]:
+    info = MAP_LEGEND.get(char)
+    return info.color if info else UNKNOWN_COLOR
