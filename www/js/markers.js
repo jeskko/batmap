@@ -12,7 +12,7 @@
  * separate always-toggled layer, since a line isn't a "marker type".
  */
 
-import { worldToLatLng, toLeafletZoom } from "./coords.js";
+import { worldCellCenter, toLeafletZoom } from "./coords.js";
 
 const LOCF_M_MASK = 0x0000f;
 const LOCF_M_PCITY = 0x00004;
@@ -193,7 +193,7 @@ export async function initMarkers(map, worldInfo, ui) {
   let labelsEnabled = false;
 
   for (const entry of entries) {
-    entry.marker = L.marker(worldToLatLng(entry.x, entry.y), { icon: typeIcon(entry.type) })
+    entry.marker = L.marker(worldCellCenter(entry.x, entry.y), { icon: typeIcon(entry.type) })
       .bindPopup(entry.html)
       .bindTooltip(entry.name, { permanent: true, direction: "right", offset: [8, 0], className: "loc-label" });
     // Leaflet auto-opens a "permanent" tooltip the instant its marker is
@@ -214,7 +214,7 @@ export async function initMarkers(map, worldInfo, ui) {
   clusterGroup.addTo(map);
 
   for (const line of trlines) {
-    L.polyline(line.map((pt) => worldToLatLng(pt.x, pt.y)), {
+    L.polyline(line.map((pt) => worldCellCenter(pt.x, pt.y)), {
       color: "#ffffff", weight: 2, opacity: 0.55,
     }).addTo(routeLinesGroup);
   }

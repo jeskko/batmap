@@ -43,6 +43,17 @@ a { color: inherit; }
   gap: 1em;
   padding: 0 1em;
   box-shadow: 0 2px 8px var(--color-border);
+  /* z-index only has an effect on a positioned element -- without this,
+     the z-index below was silently ignored (header stayed position:
+     static), leaving nothing to stop Leaflet's internal panes (z-index
+     200-900, plus `transform` on tiles for GPU positioning) from being
+     stacked above page chrome on browsers that don't contain/cap them
+     properly -- most visibly on iOS Safari/Chrome (both WebKit-based),
+     which has long-standing bugs around transformed elements escaping
+     their intended stacking context. isolation:isolate is a second,
+     belt-and-braces guard against exactly that. */
+  position: relative;
+  isolation: isolate;
   z-index: 20;
 }
 
@@ -121,6 +132,19 @@ a { color: inherit; }
   flex: 1 1 auto;
   background: var(--color-sea);
   min-width: 0;
+  /* Leaflet's own internal panes (tiles, markers, tooltips, popups) run
+     from z-index 200 up to 900, and tiles are positioned with `transform`
+     for GPU acceleration. z-index:auto (the default) does NOT establish a
+     stacking context, so without an explicit value here those panes
+     aren't contained/capped -- their stacking gets resolved against
+     whatever ancestor actually does establish one, which on WebKit
+     (iOS Safari/Chrome) can mean they paint above unrelated page chrome
+     like the header/sidebar instead of staying confined to the map area.
+     An explicit z-index (even 0) plus isolation:isolate properly traps
+     them inside this box. */
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
 }
 
 .leaflet-container {
@@ -159,6 +183,13 @@ a { color: inherit; }
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 8px var(--color-border);
+  /* Same reasoning as .site-header above -- z-index needs a position to
+     do anything. This didn't visibly matter on desktop (the sidebar and
+     #map are side-by-side flex items, so they never overlap regardless of
+     stacking), but the mobile layout below overlays the sidebar on top of
+     #map, where it does matter. */
+  position: relative;
+  isolation: isolate;
   z-index: 10;
 }
 

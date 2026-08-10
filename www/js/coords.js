@@ -31,6 +31,20 @@ export function worldToLatLng(x, y) {
   return L.latLng(-y, x);
 }
 
+/**
+ * Same as worldToLatLng(), but for placing something *at* world cell
+ * (x, y) rather than at one of its corners. The tile raster treats pixel
+ * (x, y) of the source image as covering the cell spanning [x, x+1) x
+ * [y, y+1) -- so worldToLatLng(x, y) itself lands exactly on that cell's
+ * top-left corner (harmless for view-centering/bounds math, but a marker
+ * placed there visibly sits in the corner rather than the middle of its
+ * cell, more so the higher you zoom in). Use this instead for markers,
+ * tradelane lines, and anything else meant to mark a specific location.
+ */
+export function worldCellCenter(x, y) {
+  return worldToLatLng(x + 0.5, y + 0.5);
+}
+
 export function latLngToWorld(latlng) {
   return { x: Math.round(latlng.lng), y: Math.round(-latlng.lat) };
 }

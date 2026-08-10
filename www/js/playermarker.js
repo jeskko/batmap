@@ -12,7 +12,7 @@
  * compatibility, matching the old behavior.
  */
 
-import { worldToLatLng } from "./coords.js";
+import { worldCellCenter } from "./coords.js";
 
 const PLAYER_ZOOM = 2;
 
@@ -25,11 +25,12 @@ export function addPlayerMarker(map, { name, x, y, zoom }) {
     className: "player-marker-icon",
   });
 
-  const marker = L.marker(worldToLatLng(x, y), { icon, zIndexOffset: 1000 })
+  const position = worldCellCenter(x, y);
+  const marker = L.marker(position, { icon, zIndexOffset: 1000 })
     .addTo(map)
     .bindPopup(`<b>${escapeHtml(name)}</b>`);
 
-  map.setView(worldToLatLng(x, y), zoom !== null ? zoom : PLAYER_ZOOM);
+  map.setView(position, zoom !== null ? zoom : PLAYER_ZOOM);
   marker.openPopup();
 
   return marker;
