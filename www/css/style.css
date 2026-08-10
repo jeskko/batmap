@@ -3,6 +3,11 @@
   --color-header-bg: #0d0b09;
   --color-accent: #d6553f;
   --color-accent-dark: #a8402f;
+  /* A lighter tint of --color-accent, for text sitting directly on the
+     header's wood-grain photo (.subtitle below) -- the base accent's red
+     is dark enough that it reads as low-contrast against the wood's
+     lighter grain highlights, even with a text-shadow. */
+  --color-accent-light: #ffc2a1;
   --color-parchment: #efe3c8;
   --color-parchment-dark: #ddccA0;
   --color-text-dark: #2b2417;
@@ -77,8 +82,8 @@ a { color: inherit; }
 .site-header .subtitle {
   margin: 0;
   font-size: 0.8em;
-  color: var(--color-accent);
-  text-shadow: 1px 1px 1px #000;
+  color: var(--color-accent-light);
+  text-shadow: 1px 1px 1px #000, 0 0 3px rgba(0, 0, 0, 0.8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -342,6 +347,12 @@ a { color: inherit; }
   padding: 1px 4px;
   white-space: nowrap;
   box-shadow: none;
+  /* Clickable -- same action as clicking the marker's own dot (see
+     markers.js's tooltipopen handler). Leaflet's default .leaflet-tooltip
+     rule sets pointer-events: none; override it explicitly here rather
+     than relying on the bindTooltip({interactive: true}) option alone. */
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .leaflet-tooltip.loc-label::before { display: none; }
