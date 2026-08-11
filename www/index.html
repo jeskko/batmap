@@ -35,25 +35,35 @@
       <div id="type-filters"></div>
       <div id="continent-filters"></div>
 
-      <div class="filter-group">
-        <h3>Layers</h3>
-        <label class="toggle-row">
-          <input id="route-lines-toggle" type="checkbox" checked>
-          Trade lane routes
-        </label>
-        <label class="toggle-row">
-          <input id="label-toggle" type="checkbox">
-          Marker labels <span class="toggle-hint">(closest 3 zoom levels)</span>
-        </label>
-        <label class="toggle-row">
-          <input id="ascii-toggle" type="checkbox">
-          Text map <span class="toggle-hint">(closest 3 zoom levels)</span>
-        </label>
+      <div class="filter-group" data-section-id="filter:layers">
+        <button type="button" class="section-header">
+          <span class="chevron" aria-hidden="true"></span>
+          <h3>Layers</h3>
+        </button>
+        <div class="section-body">
+          <label class="toggle-row">
+            <input id="route-lines-toggle" type="checkbox" checked>
+            Trade lane routes
+          </label>
+          <label class="toggle-row">
+            <input id="label-toggle" type="checkbox">
+            Marker labels <span class="toggle-hint">(closest 3 zoom levels)</span>
+          </label>
+          <label class="toggle-row">
+            <input id="ascii-toggle" type="checkbox">
+            Text map <span class="toggle-hint">(closest 3 zoom levels)</span>
+          </label>
+        </div>
       </div>
 
-      <div class="filter-group location-list-group">
-        <h3>Locations</h3>
-        <div id="location-list" class="location-list"></div>
+      <div class="filter-group location-list-group" data-section-id="locations">
+        <button type="button" class="section-header">
+          <span class="chevron" aria-hidden="true"></span>
+          <h3>Locations</h3>
+        </button>
+        <div class="section-body">
+          <div id="location-list" class="location-list"></div>
+        </div>
       </div>
     </div>
   </aside>

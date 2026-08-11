@@ -13,6 +13,7 @@
  */
 
 import { worldCellCenter, toLeafletZoom } from "./coords.js";
+import { makeCollapsible } from "./collapsible.js";
 
 const LOCF_M_MASK = 0x0000f;
 const LOCF_M_PCITY = 0x00004;
@@ -25,19 +26,13 @@ const LOCF_T_MONSTER = 0x00080;
 const LOCF_T_TRAINER = 0x00100;
 const LOCF_T_FORT = 0x00200;
 
-const TYPE_META = {
-  city:      { label: "Cities",        color: "#e04b4b" },
-  pcity:     { label: "Player Cities", color: "#9b59d0" },
-  guild:     { label: "Guilds",        color: "#e07b39" },
-  shrine:    { label: "Shrines",       color: "#3fb37f" },
-  ss:        { label: "Societies",     color: "#4a90d9" },
-  trainer:   { label: "Trainers",      color: "#d9a441" },
-  monster:   { label: "Monsters",      color: "#7f1d1d" },
-  fort:      { label: "Forts",         color: "#6b7280" },
-  ferry:     { label: "Ferries",       color: "#9b59d0" },
-  tradelane: { label: "Trade Lane Waypoints", color: "#9ca3af" },
-  default:   { label: "Areas",         color: "#eab308" },
-};
+// Label/color/emoji per location type is configured server-side in
+// legend.py's LOCATION_TYPE_LEGEND and shipped via world.json's
+// "locationTypes" key (set below, once worldInfo is available) -- this is
+// just an emergency fallback for a stale/pre-upgrade world.json that
+// doesn't carry that key yet.
+const FALLBACK_TYPE = { label: "Areas", color: "#eab308", emoji: "📍" };
+let TYPE_META = {};
 
 const CONTINENT_COLORS = {
   laenor: "#a55555", rothikgen: "#559955", lucentium: "#555599",
@@ -69,7 +64,7 @@ function typeIcon(type) {
       iconAnchor: [4, 4],
     });
   }
-  const meta = TYPE_META[type] || TYPE_META.default;
+  const meta = TYPE_META[type] || TYPE_META.default || FALLBACK_TYPE;
   return L.divIcon({
     className: "loc-marker",
     html: `<span class="loc-dot" style="background:${meta.color}"></span>`,
@@ -80,19 +75,27 @@ function typeIcon(type) {
 }
 
 /** Generic "chip filter" widget shared by the continent and type filter rows. */
-function createFilterGroup(container, { title, items, onChange }) {
+function createFilterGroup(container, { title, items, onChange, sectionId, collapseState }) {
   const state = {};
   for (const item of items) state[item.id] = true;
 
   const wrap = document.createElement("div");
   wrap.className = "filter-group";
-  const heading = document.createElement("h3");
-  heading.textContent = title;
-  wrap.appendChild(heading);
+  wrap.dataset.sectionId = sectionId;
+
+  const header = document.createElement("button");
+  header.type = "button";
+  header.className = "section-header";
+  header.innerHTML = `<span class="chevron" aria-hidden="true"></span><h3>${title}</h3>`;
+  wrap.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "section-body";
+  wrap.appendChild(body);
 
   const chipRow = document.createElement("div");
   chipRow.className = "chip-row";
-  wrap.appendChild(chipRow);
+  body.appendChild(chipRow);
 
   const chips = {};
 
@@ -142,6 +145,7 @@ function createFilterGroup(container, { title, items, onChange }) {
 
   refreshChips();
   container.appendChild(wrap);
+  makeCollapsible(header, wrap, sectionId, collapseState);
   return state;
 }
 
@@ -151,7 +155,9 @@ async function loadJson(path) {
   return res.json();
 }
 
-export async function initMarkers(map, worldInfo, ui) {
+export async function initMarkers(map, worldInfo, ui, collapseState) {
+  TYPE_META = worldInfo.locationTypes || {};
+
   const [markerRecords, tradelanePoints, trlines] = await Promise.all([
     loadJson("data/markers.json"),
     loadJson("data/tradelane.json"),
@@ -175,7 +181,10 @@ export async function initMarkers(map, worldInfo, ui) {
 
   const usedTypes = [...new Set(entries.map((e) => e.type))]
     .sort()
-    .map((id) => ({ id, label: TYPE_META[id]?.label || id, color: (TYPE_META[id] || TYPE_META.default).color }));
+    .map((id) => {
+      const meta = TYPE_META[id] || TYPE_META.default || FALLBACK_TYPE;
+      return { id, label: `${meta.emoji} ${meta.label || id}`, color: meta.color };
+    });
 
   const continentItems = worldInfo.continents.map((c) => ({
     id: c.id, label: c.name, color: CONTINENT_COLORS[c.id] || "#888",
@@ -334,6 +343,12 @@ export async function initMarkers(map, worldInfo, ui) {
     if (entry) reconcileLabel(entry);
   });
 
+  // Reassigned once buildLocationList() sets up the continent bar stack
+  // below -- applyFilters() can run before that (it doesn't, today, but
+  // this keeps the two decoupled) and a hidden continent must never be
+  // left occupying a slot in the pinned stack or the sticky hand-off.
+  let recomputeContinentStack = () => {};
+
   function applyFilters() {
     for (const entry of entries) {
       const visible = isVisible(entry);
@@ -346,16 +361,19 @@ export async function initMarkers(map, worldInfo, ui) {
       group.classList.toggle("is-hidden", !anyVisible);
     }
     updateLabels();
+    recomputeContinentStack();
   }
 
   typeState = createFilterGroup(ui.typeFilters, {
     title: "Location type", items: usedTypes,
     onChange: (state) => { typeState = state; applyFilters(); },
+    sectionId: "filter:type", collapseState,
   });
 
   continentState = createFilterGroup(ui.continentFilters, {
     title: "Continent", items: continentItems,
     onChange: (state) => { continentState = state; applyFilters(); },
+    sectionId: "filter:continent", collapseState,
   });
 
   ui.routeLinesToggle.addEventListener("change", () => {
@@ -374,13 +392,92 @@ export async function initMarkers(map, worldInfo, ui) {
     applyFilters();
   });
 
-  buildLocationList(ui.locationList, entries, continentItems, map, clusterGroup);
+  recomputeContinentStack = buildLocationList(ui.locationList, entries, continentItems, map, clusterGroup, collapseState);
   applyFilters();
 
   return { entries, map };
 }
 
-function buildLocationList(container, entries, continentItems, map, clusterGroup) {
+/**
+ * Sets up the persistent "pile of continent bars" effect: as a continent's
+ * whole group (bar + items) scrolls past, its bar is moved out of the flow
+ * and appended to `stack` -- a `position: sticky; top: 0` strip pinned
+ * above the list -- so it stays visible and clickable no matter how far
+ * you scroll, instead of disappearing once you've moved on to later
+ * continents. The upcoming (not-yet-passed) continent's own bar remains
+ * `position: sticky` inside its own group, docked at `top: <stack height>`
+ * so it appears directly below the pinned stack.
+ *
+ * "Passed" is recomputed from scratch on every scroll frame rather than
+ * tracked incrementally -- with at most a handful of continents this is
+ * cheap, and it trivially self-corrects when scrolling back up (a bar
+ * un-pins and returns to its own group) or when filtering hides a
+ * continent entirely (skipped, left in its own group, uncounted).
+ */
+function createContinentStackRecomputer(scrollEl, stack, continentGroups) {
+  let ticking = false;
+
+  function recompute() {
+    ticking = false;
+    if (!scrollEl) return;
+    const containerTop = scrollEl.getBoundingClientRect().top;
+    let cumulative = 0;
+    let stillPassed = true;
+
+    for (const { group, heading } of continentGroups) {
+      if (group.classList.contains("is-hidden")) {
+        if (heading.parentElement !== group) group.insertBefore(heading, group.firstChild);
+        heading.style.position = "sticky";
+        heading.style.top = "0px";
+        continue;
+      }
+
+      const isPassed = stillPassed && group.getBoundingClientRect().bottom <= containerTop + cumulative;
+      if (!isPassed) stillPassed = false;
+
+      if (isPassed) {
+        if (heading.parentElement !== stack) stack.appendChild(heading);
+        heading.style.position = "static";
+        heading.style.top = "";
+        cumulative += heading.offsetHeight;
+      } else {
+        if (heading.parentElement !== group) group.insertBefore(heading, group.firstChild);
+        heading.style.position = "sticky";
+        heading.style.top = `${cumulative}px`;
+      }
+    }
+  }
+
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(recompute);
+  }
+
+  scrollEl?.addEventListener("scroll", onScroll);
+  window.addEventListener("resize", recompute);
+  recompute();
+  return recompute;
+}
+
+/**
+ * Scrolls so `group`'s content starts right below wherever the pinned
+ * stack will end once every continent before it is pinned -- i.e. "the
+ * start of this continent's locations," regardless of whether `group`'s
+ * own bar is currently pinned in the stack, sticky-docked live, or just
+ * sitting further down the list not yet reached. Using `group`'s own rect
+ * (not its bar's) matters: once a bar is pinned, it's reparented out of
+ * `group` and no longer reflects the group's actual document position.
+ */
+function scrollContinentToTop(group, scrollEl, stackHeightBefore) {
+  if (!scrollEl) return;
+  const groupRect = group.getBoundingClientRect();
+  const scrollRect = scrollEl.getBoundingClientRect();
+  const delta = (groupRect.top - scrollRect.top) - stackHeightBefore;
+  scrollEl.scrollTo({ top: scrollEl.scrollTop + delta, behavior: "smooth" });
+}
+
+function buildLocationList(container, entries, continentItems, map, clusterGroup, collapseState) {
   container.innerHTML = "";
   const byContinent = new Map(continentItems.map((c) => [c.id, []]));
 
@@ -390,32 +487,95 @@ function buildLocationList(container, entries, continentItems, map, clusterGroup
     byContinent.get(entry.continentId)?.push(entry);
   }
 
-  for (const continent of continentItems) {
+  // Pinned above every continent group, in document order -- see
+  // createContinentStackRecomputer(). Empty (zero height) until the first
+  // continent scrolls past.
+  const stack = document.createElement("div");
+  stack.className = "continent-stack";
+  container.appendChild(stack);
+
+  const scrollEl = container.closest(".sidebar-scroll");
+  const continentGroups = [];
+  const recompute = createContinentStackRecomputer(scrollEl, stack, continentGroups);
+
+  continentItems.forEach((continent) => {
     const items = byContinent.get(continent.id) || [];
-    if (!items.length) continue;
+    if (!items.length) return;
     items.sort((a, b) => a.name.localeCompare(b.name));
 
+    const sectionId = `loc:${continent.id}`;
     const group = document.createElement("div");
     group.className = "location-group";
+    group.dataset.sectionId = sectionId;
 
-    const heading = document.createElement("h4");
-    heading.innerHTML = `<span class="dot" style="background:${continent.color}"></span>${continent.label}`;
+    const heading = document.createElement("div");
+    heading.className = "location-group-heading";
+    heading.style.background = continent.color;
+
+    const chevron = document.createElement("button");
+    chevron.type = "button";
+    chevron.className = "chevron-toggle";
+    chevron.setAttribute("aria-label", `Collapse ${continent.label}`);
+    chevron.innerHTML = `<span class="chevron" aria-hidden="true"></span>`;
+    // The chevron only ever toggles collapse -- it doesn't also jump-scroll
+    // (that's the title's job below), so collapsing continents you don't
+    // care about doesn't fight with the list jumping around underneath you.
+    chevron.addEventListener("click", (ev) => ev.stopPropagation());
+    heading.appendChild(chevron);
+
+    const title = document.createElement("button");
+    title.type = "button";
+    title.className = "loc-group-title";
+    title.textContent = continent.label;
+    heading.appendChild(title);
+
     group.appendChild(heading);
+
+    const body = document.createElement("div");
+    body.className = "location-group-body";
+    group.appendChild(body);
 
     for (const entry of items) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "loc-item";
-      btn.textContent = entry.name;
+      const meta = TYPE_META[entry.type] || TYPE_META.default || FALLBACK_TYPE;
+      btn.textContent = `${meta.emoji} ${entry.name}`;
       btn.addEventListener("click", () => {
         // zoomToShowLayer handles un-clustering/spiderfying as needed, then
         // opens the popup once the marker is actually visible on the map.
         clusterGroup.zoomToShowLayer(entry.marker, () => entry.marker.openPopup());
       });
       entry.listItem = btn;
-      group.appendChild(btn);
+      body.appendChild(btn);
     }
 
+    makeCollapsible(chevron, group, sectionId, collapseState);
+    // Collapsing changes this group's height, which can shift whether it
+    // (or a later one) now counts as "passed" -- keep the stack in sync
+    // immediately rather than waiting for the next scroll event.
+    chevron.addEventListener("click", () => recompute());
+
+    // Clicking the bar itself always expands (if needed) and jump-scrolls
+    // to the start of this continent's locations -- whether the bar is
+    // currently pinned in the stack, docked live, or further down the list.
+    title.addEventListener("click", () => {
+      if (group.classList.contains("is-collapsed")) {
+        group.classList.remove("is-collapsed");
+        chevron.setAttribute("aria-expanded", "true");
+        collapseState.set(sectionId, false);
+      }
+      const stackHeightBefore = continentGroups
+        .slice(0, continentGroups.findIndex((g) => g.group === group))
+        .reduce((sum, g) => sum + (g.group.classList.contains("is-hidden") ? 0 : g.heading.offsetHeight), 0);
+      scrollContinentToTop(group, scrollEl, stackHeightBefore);
+      recompute();
+    });
+
+    continentGroups.push({ group, heading });
     container.appendChild(group);
-  }
+  });
+
+  recompute();
+  return recompute;
 }

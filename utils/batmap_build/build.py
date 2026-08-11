@@ -24,6 +24,7 @@ from pathlib import Path
 from . import ascii_render
 from . import markers as markers_mod
 from . import render, tiles
+from .legend import LOCATION_TYPE_LEGEND
 from .mapfile import read_map
 from .world import MAP_CONTINENTS, WORLD_OX, WORLD_OY, WORLD_W, WORLD_H
 from .zoomconfig import ASCII_ZOOM_LEVELS, LABEL_MIN_ZOOM, MAX_ZOOM, MIN_ZOOM, zoom_to_pyramid_index
@@ -128,6 +129,10 @@ def build(maputils_dir: Path, out_dir: Path, force: bool = False, with_ascii: bo
         "minZoom": MIN_ZOOM, "maxZoom": MAX_ZOOM,
         "labelMinZoom": LABEL_MIN_ZOOM,
         "asciiZoomLevels": ASCII_ZOOM_LEVELS if with_ascii else [],
+        "locationTypes": {
+            key: {"label": info.label, "color": info.color, "emoji": info.emoji}
+            for key, info in LOCATION_TYPE_LEGEND.items()
+        },
         "continents": [
             {
                 "id": c.id, "name": c.name,

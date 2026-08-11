@@ -2,10 +2,23 @@ import { createMap, fitToContinents, setupCursorReadout, setupMakeLink, setupAsc
 import { worldToLatLng } from "./coords.js";
 import { initMarkers } from "./markers.js";
 import { addPlayerMarker } from "./playermarker.js";
+import { createCollapseState, makeCollapsible } from "./collapsible.js";
 
 async function main() {
   const worldInfo = await fetchJson("data/world.json");
   const { map, asciiLayer } = createMap(document.getElementById("map"), worldInfo);
+
+  // Deep-link params (position, toggles, and which sidebar sections were
+  // collapsed) are all read up front, before anything they affect gets
+  // built, so both the static sections below and initMarkers()'s dynamic
+  // ones can consult the same collapse state from the start.
+  const deepLink = getDeepLinkParams();
+  const collapseState = createCollapseState(deepLink.collapsed);
+
+  for (const section of document.querySelectorAll("[data-section-id]")) {
+    const header = section.querySelector(":scope > .section-header");
+    if (header) makeCollapsible(header, section, section.dataset.sectionId, collapseState);
+  }
 
   const ui = {
     continentFilters: document.getElementById("continent-filters"),
@@ -17,19 +30,18 @@ async function main() {
   };
   const asciiToggle = document.getElementById("ascii-toggle");
 
-  await initMarkers(map, worldInfo, ui);
+  await initMarkers(map, worldInfo, ui, collapseState);
   setupAsciiLayerToggle(map, asciiLayer, asciiToggle, worldInfo.asciiZoomLevels || []);
 
   setupCursorReadout(map, worldInfo, document.getElementById("cursor-readout"));
   setupMakeLink(map, document.getElementById("make-link"), showToast, {
     routes: ui.routeLinesToggle, labels: ui.labelToggle, ascii: asciiToggle,
-  });
+  }, () => ({ collapsed: collapseState.toArray().join(",") }));
   setupSidebarToggle();
 
   // Apply persisted view + toggle state from a shared link. Toggles are
   // applied after initMarkers()/setupAsciiLayerToggle() above so their
   // change-event listeners already exist to react to it.
-  const deepLink = getDeepLinkParams();
   applyLinkedToggle(ui.routeLinesToggle, deepLink.routes);
   applyLinkedToggle(ui.labelToggle, deepLink.labels);
   applyLinkedToggle(asciiToggle, deepLink.ascii);
