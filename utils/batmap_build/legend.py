@@ -103,16 +103,23 @@ class LocationTypeInfo(NamedTuple):
 # frontend as-is via data/world.json's "locationTypes" key (see build.py),
 # so tweaking an emoji/color/label here is all that's needed to change how
 # it renders, no JS edit required.
+#
+# Colors are deliberately saturated/high-contrast ("vivid") rather than the
+# muted tones a terrain-legend palette would use -- markers sit on top of
+# widely varying terrain colors and only get a thin border (see .loc-dot in
+# style.css) to separate them from the map, so each type needs to read as a
+# distinct hue at a glance rather than blend in. ferry and pcity used to
+# share the same color by accident; every entry here is a unique hue.
 LOCATION_TYPE_LEGEND: dict[str, LocationTypeInfo] = {
-    "city":      LocationTypeInfo("Cities",               "#e04b4b", "🏙️"),
-    "pcity":     LocationTypeInfo("Player Cities",        "#9b59d0", "🏰"),
-    "guild":     LocationTypeInfo("Guilds",               "#e07b39", "🏛️"),
-    "shrine":    LocationTypeInfo("Shrines",              "#3fb37f", "⛩️"),
-    "ss":        LocationTypeInfo("Societies",            "#4a90d9", "🤝"),
-    "trainer":   LocationTypeInfo("Trainers",             "#d9a441", "🎓"),
-    "monster":   LocationTypeInfo("Monsters",             "#7f1d1d", "👹"),
-    "fort":      LocationTypeInfo("Forts",                "#6b7280", "🛡️"),
-    "ferry":     LocationTypeInfo("Ferries",              "#9b59d0", "⛴️"),
-    "tradelane": LocationTypeInfo("Trade Lane Waypoints", "#9ca3af", "🧭"),
-    "default":   LocationTypeInfo("Areas",                "#eab308", "📍"),
+    "city":      LocationTypeInfo("Cities",               "#ef4444", "🏙️"),
+    "pcity":     LocationTypeInfo("Player Cities",        "#a855f7", "🏰"),
+    "guild":     LocationTypeInfo("Guilds",               "#f97316", "🏛️"),
+    "shrine":    LocationTypeInfo("Shrines",              "#22c55e", "⛩️"),
+    "ss":        LocationTypeInfo("Societies",            "#3b82f6", "🤝"),
+    "trainer":   LocationTypeInfo("Trainers",             "#eab308", "🎓"),
+    "monster":   LocationTypeInfo("Monsters",             "#db2777", "👹"),
+    "fort":      LocationTypeInfo("Forts",                "#14b8a6", "🛡️"),
+    "ferry":     LocationTypeInfo("Ferries",              "#06b6d4", "⛴️"),
+    "tradelane": LocationTypeInfo("Trade Lane Waypoints", "#94a3b8", "🧭"),
+    "default":   LocationTypeInfo("Areas",                "#84cc16", "📍"),
 }
