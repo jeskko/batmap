@@ -431,14 +431,18 @@ a { color: inherit; }
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #fff;
+  /* Thin on purpose -- a heavier ring ate into the visible color area on a
+     12px dot, making similarly-lit types (e.g. two warm hues) harder to
+     tell apart at a glance. Just enough border to separate the dot from
+     whatever terrain color it happens to sit on. */
+  border: 1px solid #fff;
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
 .loc-dot--tradelane {
   width: 6px;
   height: 6px;
-  border-width: 1px;
+  border-width: 0.5px;
   background: #cbd5e1;
 }
 
