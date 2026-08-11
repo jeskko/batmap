@@ -88,3 +88,31 @@ BACKGROUND_SEA_COLOR: tuple[int, int, int] = MAP_LEGEND["~"].color
 def color_for(char: str) -> tuple[int, int, int]:
     info = MAP_LEGEND.get(char)
     return info.color if info else UNKNOWN_COLOR
+
+
+class LocationTypeInfo(NamedTuple):
+    label: str
+    color: str  # "#rrggbb", used directly by the frontend (CSS/canvas)
+    emoji: str
+
+
+# Location-marker "type" -> (sidebar filter label, marker/legend color, emoji
+# prefix shown in the sidebar list and type-filter chips). The type ids
+# themselves are derived client-side from each marker's raw LOCF_* flags
+# (see www/js/markers.js's locationType()) -- this table is exposed to the
+# frontend as-is via data/world.json's "locationTypes" key (see build.py),
+# so tweaking an emoji/color/label here is all that's needed to change how
+# it renders, no JS edit required.
+LOCATION_TYPE_LEGEND: dict[str, LocationTypeInfo] = {
+    "city":      LocationTypeInfo("Cities",               "#e04b4b", "🏙️"),
+    "pcity":     LocationTypeInfo("Player Cities",        "#9b59d0", "🏰"),
+    "guild":     LocationTypeInfo("Guilds",               "#e07b39", "🏛️"),
+    "shrine":    LocationTypeInfo("Shrines",              "#3fb37f", "⛩️"),
+    "ss":        LocationTypeInfo("Societies",            "#4a90d9", "🤝"),
+    "trainer":   LocationTypeInfo("Trainers",             "#d9a441", "🎓"),
+    "monster":   LocationTypeInfo("Monsters",             "#7f1d1d", "👹"),
+    "fort":      LocationTypeInfo("Forts",                "#6b7280", "🛡️"),
+    "ferry":     LocationTypeInfo("Ferries",              "#9b59d0", "⛴️"),
+    "tradelane": LocationTypeInfo("Trade Lane Waypoints", "#9ca3af", "🧭"),
+    "default":   LocationTypeInfo("Areas",                "#eab308", "📍"),
+}

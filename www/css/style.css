@@ -216,14 +216,48 @@ a { color: inherit; }
 
 .filter-group { margin-bottom: 1em; }
 
+/* Shared collapsible-section header (Location type / Continent / Layers /
+   Locations) -- see collapsible.js. A plain button so the whole row is
+   one click target and gets the right default keyboard/AT semantics. */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 0.4em;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
 .filter-group h3 {
   font-size: 0.75em;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0 0 0.4em;
+  margin: 0;
   color: var(--color-text-dark);
   opacity: 0.7;
 }
+
+/* Plain triangle, no image/font-icon dependency -- rotates to point right
+   when its section is collapsed. */
+.chevron {
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-left: 0.3em solid transparent;
+  border-right: 0.3em solid transparent;
+  border-top: 0.35em solid currentColor;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+
+.filter-group.is-collapsed .section-body { display: none; }
+.filter-group.is-collapsed .chevron { transform: rotate(-90deg); }
 
 .chip-row {
   display: flex;
@@ -284,21 +318,93 @@ a { color: inherit; }
 .location-list-group { flex: 1 1 auto; }
 
 .location-group.is-hidden { display: none; }
+.location-group { margin-top: 0.6em; }
+/* #location-list's real first child is .continent-stack (empty until a
+   continent scrolls past it), not the first .location-group -- target it
+   directly rather than :first-child so Laenor's group doesn't inherit an
+   unwanted top gap. */
+.continent-stack + .location-group { margin-top: 0; }
 
-.location-group h4 {
+/* Pinned strip above the list -- continent bars get moved in here once
+   their whole group scrolls past (see createContinentStackRecomputer in
+   markers.js), so previously-visited continents stay visible and
+   clickable instead of disappearing as you scroll further down. Packed
+   with no gaps so pinned bars sit flush against each other. */
+.continent-stack {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+}
+
+.continent-stack:not(:empty) { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25); }
+
+/* Pinned bars sit flush against each other -- square corners and a hairline
+   divider read as one contiguous strip instead of a stack of separate
+   floating pills (the live, not-yet-passed bar below keeps its own
+   rounded/shadowed look, so it's visually distinct as "still scrolling"). */
+.continent-stack .location-group-heading {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.continent-stack .location-group-heading + .location-group-heading {
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Solid-color bar (background set inline per-continent in markers.js).
+   Its `position`/`top` are toggled by markers.js between "sticky, docked
+   live below the pinned stack" (this continent is the one currently being
+   scrolled through) and "static, inside .continent-stack" (fully passed
+   and pinned) -- the CSS values below are just its live-docked default. */
+.location-group-heading {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: stretch;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  border-radius: 0.3em;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.chevron-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5em;
-  font-size: 0.85em;
-  margin: 0.8em 0 0.3em;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2em;
+  background: rgba(0, 0, 0, 0.12);
+  border: none;
+  cursor: pointer;
+  color: #fff;
 }
 
-.location-group h4 .dot {
-  width: 0.7em;
-  height: 0.7em;
-  border-radius: 50%;
-  display: inline-block;
+.chevron-toggle .chevron {
+  border-top-color: #fff;
+  opacity: 0.9;
 }
+
+.location-group.is-collapsed .chevron-toggle .chevron { transform: rotate(-90deg); }
+
+.loc-group-title {
+  flex: 1 1 auto;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0.45em 0.6em;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  color: inherit;
+  text-shadow: inherit;
+}
+
+.location-group-body { padding-top: 0.3em; }
+.location-group.is-collapsed .location-group-body { display: none; }
 
 .loc-item {
   display: block;

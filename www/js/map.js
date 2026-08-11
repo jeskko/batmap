@@ -146,8 +146,11 @@ export function setupCursorReadout(map, worldInfo, el) {
  * @param toggles map of URL param name -> checkbox element, e.g.
  *   { routes: routeLinesToggle, labels: labelToggle, ascii: asciiToggle }
  *   Each toggle's current checked state is encoded into the generated link.
+ * @param extraParams optional () => ({ paramName: stringValue, ... }),
+ *   called at click-time, for state that doesn't fit the single-checkbox
+ *   shape above (e.g. the set of collapsed sidebar sections).
  */
-export function setupMakeLink(map, button, toast, toggles) {
+export function setupMakeLink(map, button, toast, toggles, extraParams) {
   button.addEventListener("click", async () => {
     const { x, y } = latLngToWorld(map.getCenter());
     const url = new URL(window.location.href);
@@ -157,6 +160,9 @@ export function setupMakeLink(map, button, toast, toggles) {
     url.searchParams.set("zoom", map.getZoom());
     for (const [param, checkbox] of Object.entries(toggles)) {
       url.searchParams.set(param, checkbox.checked ? "1" : "0");
+    }
+    for (const [param, value] of Object.entries(extraParams ? extraParams() : {})) {
+      url.searchParams.set(param, value);
     }
 
     const link = url.toString();
@@ -186,6 +192,12 @@ export function getDeepLinkParams() {
     routes: boolParam(params, "routes"),
     labels: boolParam(params, "labels"),
     ascii: boolParam(params, "ascii"),
+    // Comma-separated sidebar section ids that were collapsed when the
+    // link was made (see collapsible.js) -- "" (not present) means "none
+    // specified, leave every section at its page-default expanded state".
+    collapsed: params.has("collapsed")
+      ? params.get("collapsed").split(",").filter(Boolean)
+      : [],
   };
 }
 
