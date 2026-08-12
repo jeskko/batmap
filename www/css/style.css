@@ -157,6 +157,27 @@ a { color: inherit; }
   font-family: inherit;
 }
 
+/* Our terrain/ASCII tiles are a fixed-resolution pixel-art raster (1 world
+   unit = 1 tile pixel at native zoom, see coords.js), not photographic
+   imagery -- they should render as crisp blocks, not smoothed, whenever
+   the browser has to scale them by anything other than an exact integer
+   factor. That happens more often than it looks like it should: fractional
+   OS display scaling (125%/150%, common on Windows), a lingering non-100%
+   per-site browser zoom, or a HiDPI devicePixelRatio all make the browser
+   resample every tile <img>. Neither Chrome nor Firefox opt into
+   crisp/nearest-neighbor scaling by default (Leaflet's own leaflet.css
+   only special-cases Safari, see .leaflet-safari .leaflet-tile below this
+   in the cascade) -- whether a given visitor notices the resulting blur
+   depends entirely on whether their own display happens to land on a
+   clean integer scale, which is why reports skew towards e.g. Firefox
+   users on Windows rather than being universal. -moz-crisp-edges is a
+   pre-Firefox-61 fallback; every current browser understands `pixelated`,
+   which -- coming second -- wins the cascade in all of them. */
+.leaflet-tile {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: pixelated;
+}
+
 /* While the ASCII/text layer is both toggled on AND within its supported
    zoom range, the empty-tile background (open ocean outside any
    continent) switches from a flat color to a repeating tile of the same
