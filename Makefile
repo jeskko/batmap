@@ -63,7 +63,10 @@ render: venv
 
 install: render
 	mkdir -p $(WWW_DIR) $(TILES_DIR) $(ASCII_TILES_DIR) $(DATA_DIR)
-	rsync -a --delete www/ $(WWW_DIR)/ --exclude tiles --exclude tiles-ascii --exclude data
+	# compat/ is the old-site (gmap2/) permalink shim -- it's deployed by
+	# hand into that separate, unrelated directory (see www/compat/README.md),
+	# not shipped as part of this site's own output.
+	rsync -a --delete www/ $(WWW_DIR)/ --exclude tiles --exclude tiles-ascii --exclude data --exclude compat
 	rsync -a --delete $(BUILD_DIR)/tiles/       $(TILES_DIR)/
 	rsync -a --delete $(BUILD_DIR)/tiles-ascii/  $(ASCII_TILES_DIR)/
 	rsync -a --delete $(BUILD_DIR)/data/         $(DATA_DIR)/
