@@ -28,7 +28,7 @@ from .zoomconfig import zoom_to_scale
 
 # Font sizes per zoom level, matching the values already present (some
 # unused until now) in the old tools/makegmaps.php $fontSize table.
-FONT_SIZES = {9: 7, 10: 13, 11: 26}
+FONT_SIZES = {9: 8, 10: 16, 11: 32}
 
 _CHAR_BY_INDEX = {v: k for k, v in INDEX_BY_CHAR.items()}
 
