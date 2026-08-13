@@ -107,6 +107,9 @@ That does **not** extend to everything in the repo, though:
 - `www/vendor/leaflet/` and `www/vendor/markercluster/` are third-party
   libraries vendored as-is, each under its own license (included alongside
   them).
+- `utils/vendor/NotoMonoNerdFontMono/` is the ASCII/text-map layer's glyph
+  font — [Noto Mono](https://fonts.google.com/noto), Nerd Font-patched —
+  vendored under the SIL Open Font License (included alongside it).
 - BatMUD's world map data itself (fetched into `extern/`, and anything
   rendered from it into `www/tiles/`, `www/tiles-ascii/`, and `www/data/`)
   isn't part of this repository at all, and remains the property of BAT ry
@@ -121,3 +124,5 @@ Jeskko & Ggr — its source lives in its own Mercurial repository at
 [tnsp.org/hg/batmud/gmap2](https://tnsp.org/hg/batmud/gmap2/), not in this
 repo. Built with [Leaflet](https://leafletjs.com/) and
 [Leaflet.markercluster](https://github.com/Leaflet/Leaflet.markercluster).
+The text-map layer's font is [Noto Mono](https://fonts.google.com/noto),
+patched by [Nerd Fonts](https://www.nerdfonts.com/).
