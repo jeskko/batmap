@@ -20,10 +20,10 @@ NATIVE_SCALE_INDEX = 5  # pyramid index of 1px/cell (zoom 6)
 NUM_SCALES = MAX_ZOOM   # indices 0..(MAX_ZOOM-1)
 
 # Zoom levels that also get an ASCII/text tile pyramid (see ascii_render.py).
-# Matches LABEL_MIN_ZOOM below -- the top three levels (8px/16px/32px per
-# cell). Zoom 9's 8px cells read more as texture than text, but it's kept
-# in sync with the label toggle's range rather than cut on its own.
-ASCII_ZOOM_LEVELS = [9, 10, 11]
+# Matches LABEL_MIN_ZOOM below -- the top two levels (14px/28px per
+# cell). Zoom 9's 6px cells did read more as texture than text, so it was 
+# dropped from the ASCII tile set.
+ASCII_ZOOM_LEVELS = [10, 11]
 
 # Zoom levels (closest-in) at which permanent marker name labels are offered.
 LABEL_MIN_ZOOM = MAX_ZOOM - 2  # top three levels: 9, 10 and 11
