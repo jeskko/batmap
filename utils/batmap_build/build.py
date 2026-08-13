@@ -29,7 +29,18 @@ from .mapfile import read_map
 from .world import MAP_CONTINENTS, WORLD_OX, WORLD_OY, WORLD_W, WORLD_H
 from .zoomconfig import ASCII_ZOOM_LEVELS, LABEL_MIN_ZOOM, MAX_ZOOM, MIN_ZOOM, zoom_to_pyramid_index
 
-FONT_RELATIVE_PATH = Path("world") / "MonospaceBold.ttf"
+# ASCII/text-map glyph font. Vendored here (not read from the extern/
+# checkout) so the build doesn't depend on whatever font happens to ship
+# with the upstream maputils data -- see utils/vendor/NotoMonoNerdFontMono/
+# for its OFL license. Source:
+# https://github.com/ryanoasis/nerd-fonts/blob/master/patched-fonts/Noto/Mono/NotoMonoNerdFontMono-Regular.ttf
+# ("Mono" variant specifically -- fixed advance width for every glyph,
+# including the box-drawing/symbol ones, which matters here since glyphs
+# are blockified onto a uniform (scale, scale) grid). To swap in a
+# different font, replace the .ttf (and LICENSE) in that directory and
+# update FONT_PATH below; FONT_SIZES in ascii_render.py will likely need
+# re-tuning per font too.
+FONT_PATH = Path(__file__).resolve().parent.parent / "vendor" / "NotoMonoNerdFontMono" / "NotoMonoNerdFontMono-Regular.ttf"
 
 
 def _newest_mtime(paths: list[Path]) -> float:
@@ -41,18 +52,19 @@ def build(maputils_dir: Path, out_dir: Path, force: bool = False, with_ascii: bo
     tiles_dir = out_dir / "tiles"
     ascii_tiles_dir = out_dir / "tiles-ascii"
     data_dir = out_dir / "data"
-    font_path = maputils_dir / FONT_RELATIVE_PATH
+    font_path = FONT_PATH
 
     if with_ascii and not font_path.exists():
         print(f"warning: font not found at {font_path}, disabling ASCII text layer", file=sys.stderr)
         with_ascii = False
 
-    # Watch the whole package, not just world.py -- otherwise a rendering
-    # change (palette/legend tweaks, tile-compositing fixes, etc.) with no
-    # corresponding .map/.loc change wouldn't be noticed, and a stale
-    # build/ directory would silently keep serving output from before the
-    # code change.
+    # Watch the whole package (plus the vendored font), not just world.py --
+    # otherwise a rendering change (palette/legend tweaks, tile-compositing
+    # fixes, a font swap, etc.) with no corresponding .map/.loc change
+    # wouldn't be noticed, and a stale build/ directory would silently keep
+    # serving output from before the change.
     source_files = list(Path(__file__).parent.glob("*.py"))
+    source_files.append(FONT_PATH)
     for continent in MAP_CONTINENTS:
         source_files.append(world_dir / f"{continent.id}.map")
         source_files.append(world_dir / f"{continent.id}.loc")
