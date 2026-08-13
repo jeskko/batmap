@@ -91,6 +91,11 @@ export function setupAsciiLayerToggle(map, asciiLayer, checkbox, asciiZoomLevels
 
   const container = map.getContainer();
 
+  // The checkbox starts checked in index.html -- match the layer's initial
+  // state to it explicitly, same as ui.routeLinesToggle in markers.js
+  // (rendering "checked" doesn't itself fire the "change" listener below).
+  if (checkbox.checked) asciiLayer.addTo(map);
+
   function updateBackground() {
     const tileZoom = map.getZoom() + NATIVE_ZOOM_OFFSET;
     const active = checkbox.checked && asciiZoomLevels.includes(tileZoom);
@@ -151,28 +156,47 @@ export function setupCursorReadout(map, worldInfo, el) {
  *   shape above (e.g. the set of collapsed sidebar sections).
  */
 export function setupMakeLink(map, button, toast, toggles, extraParams) {
-  button.addEventListener("click", async () => {
+  button.addEventListener("click", () => {
     const { x, y } = latLngToWorld(map.getCenter());
-    const url = new URL(window.location.href);
-    url.search = "";
-    url.searchParams.set("x", x);
-    url.searchParams.set("y", y);
-    url.searchParams.set("zoom", map.getZoom());
+    const url = buildLocationLinkUrl(x, y, map.getZoom());
     for (const [param, checkbox] of Object.entries(toggles)) {
       url.searchParams.set(param, checkbox.checked ? "1" : "0");
     }
     for (const [param, value] of Object.entries(extraParams ? extraParams() : {})) {
       url.searchParams.set(param, value);
     }
-
-    const link = url.toString();
-    try {
-      await navigator.clipboard.writeText(link);
-      toast("Link copied to clipboard!");
-    } catch {
-      window.prompt("Copy this link:", link);
-    }
+    copyLink(url.toString(), toast);
   });
+}
+
+/** Builds a URL (this page, with any other query params stripped) that reopens at world coords (x, y) and the given zoom. */
+function buildLocationLinkUrl(x, y, zoom) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.searchParams.set("x", x);
+  url.searchParams.set("y", y);
+  url.searchParams.set("zoom", zoom);
+  return url;
+}
+
+/**
+ * Link to world coords (x, y) at the given zoom -- e.g. for a location
+ * marker's own permalink (see markers.js) -- as a plain string rather than
+ * setupMakeLink()'s URL (which also carries toggle/collapse state; a
+ * single location's permalink deliberately doesn't need that).
+ */
+export function buildLocationLink(x, y, zoom) {
+  return buildLocationLinkUrl(x, y, zoom).toString();
+}
+
+/** Copies `link` to the clipboard (falling back to a manual-copy prompt if that's blocked), and toasts on success. */
+export async function copyLink(link, toast) {
+  try {
+    await navigator.clipboard.writeText(link);
+    toast("Link copied to clipboard!");
+  } catch {
+    window.prompt("Copy this link:", link);
+  }
 }
 
 function boolParam(params, name) {

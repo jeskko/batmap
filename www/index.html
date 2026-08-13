@@ -14,8 +14,20 @@
 <body>
 
 <header class="site-header">
-  <button id="sidebar-toggle" class="icon-button" type="button" aria-label="Toggle location list" aria-expanded="false" aria-controls="sidebar">
-    <span></span><span></span><span></span>
+  <!-- Mobile shows the hamburger (its sidebar is a hidden-by-default drawer
+       this opens); desktop shows a fullscreen expand/exit icon instead (its
+       sidebar starts open -- this collapses it into a pseudo-fullscreen map
+       view, so a "drawer" icon would have the semantics backwards there).
+       Which pair is visible is pure CSS (see style.css); app.js only ever
+       toggles body.is-fullscreen / aria-expanded/aria-label, not markup. -->
+  <button id="sidebar-toggle" class="icon-button" type="button" aria-label="Toggle sidebar" aria-expanded="false" aria-controls="sidebar">
+    <span class="icon-hamburger"><span></span><span></span><span></span></span>
+    <svg class="icon-fullscreen icon-fullscreen--enter" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/>
+    </svg>
+    <svg class="icon-fullscreen icon-fullscreen--exit" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 4v5H4"/><path d="M15 4v5h5"/><path d="M9 20v-5H4"/><path d="M15 20v-5h5"/>
+    </svg>
   </button>
   <a class="logo" href="https://www.bat.org/" target="_blank" rel="noopener">
     <img src="img/batmud_logo2.png" alt="BatMUD" width="150" height="84">
@@ -46,11 +58,11 @@
             Trade lane routes
           </label>
           <label class="toggle-row">
-            <input id="label-toggle" type="checkbox">
-            Marker labels <span class="toggle-hint">(closest 3 zoom levels)</span>
+            <input id="label-toggle" type="checkbox" checked>
+            Marker labels <span class="toggle-hint">(when its marker is)</span>
           </label>
           <label class="toggle-row">
-            <input id="ascii-toggle" type="checkbox">
+            <input id="ascii-toggle" type="checkbox" checked>
             Text map <span class="toggle-hint">(closest 2 zoom levels)</span>
           </label>
         </div>
@@ -77,6 +89,9 @@
     Map data by BAT ry, Ggr, Slobber &amp; Jeskko · rendered with
     <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
     · <a href="privacy.html">Privacy Policy</a>
+    · <a class="source-link" href="https://github.com/jeskko/batmap" target="_blank" rel="noopener">
+      <img src="vendor/octicons/mark-github.svg" alt="GitHub" width="14" height="14"> Source
+    </a>
   </span>
 </footer>
 

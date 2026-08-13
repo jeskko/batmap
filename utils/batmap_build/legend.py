@@ -104,6 +104,15 @@ class LocationTypeInfo(NamedTuple):
 # so tweaking an emoji/color/label here is all that's needed to change how
 # it renders, no JS edit required.
 #
+# There used to also be a per-type zoom-visibility range here (ported from
+# the old gmap2 site's MarkerManager addMarkers(mlist, minzoom, maxzoom)
+# calls), gating which types' markers/labels appeared at "far away" zooms.
+# Removed in favor of a simpler rule: every type's marker can appear at any
+# zoom, and clustering (see www/js/markers.js's isIndividuallyShown()) is
+# what actually keeps a crowded zoom from being swamped with dots/labels --
+# a marker only gets a label once it's shown as its own pin rather than
+# merged into a cluster bubble.
+#
 # Colors are deliberately saturated/high-contrast ("vivid") rather than the
 # muted tones a terrain-legend palette would use -- markers sit on top of
 # widely varying terrain colors and only get a thin border (see .loc-dot in
