@@ -9,10 +9,14 @@
  * list with a synthetic type: "tradelane" so they get a type filter chip,
  * clustering and search/list treatment for free instead of being a special
  * case -- only the connecting route *lines* (data/trlines.json) remain a
- * separate always-toggled layer, since a line isn't a "marker type".
+ * separate always-toggled layer, since a line isn't a "marker type". The
+ * waypoint markers are additionally tied to that same toggle (see
+ * isVisible()), so turning the lines off hides the waypoints too rather
+ * than leaving them looking like a disconnected, half-off feature.
  */
 
-import { worldCellCenter, toLeafletZoom } from "./coords.js";
+import { worldCellCenter } from "./coords.js";
+import { buildLocationLink, copyLink } from "./map.js";
 import { makeCollapsible } from "./collapsible.js";
 
 const LOCF_M_MASK = 0x0000f;
@@ -155,7 +159,16 @@ async function loadJson(path) {
   return res.json();
 }
 
-export async function initMarkers(map, worldInfo, ui, collapseState) {
+// Appended to every popup's own HTML -- a small permalink icon that copies
+// a link straight to this location (see the popupopen handler below, which
+// wires its href/click each time a given marker's popup opens). Loading
+// that link lands here again with the same popup automatically re-opened,
+// via app.js's deep-link handling + openAt() below.
+const PERMALINK_HTML =
+  '<div class="popup-permalink"><a href="#" class="popup-permalink-link" ' +
+  'title="Copy link to this location" aria-label="Copy link to this location">🔗</a></div>';
+
+export async function initMarkers(map, worldInfo, ui, collapseState, toast) {
   TYPE_META = worldInfo.locationTypes || {};
 
   const [markerRecords, tradelanePoints, trlines] = await Promise.all([
@@ -194,19 +207,34 @@ export async function initMarkers(map, worldInfo, ui, collapseState) {
   const routeLinesGroup = L.layerGroup();
   const markerEntries = new Map(); // Leaflet marker -> entry, for the layeradd handler below
 
-  // Only the closest few zoom levels offer name labels -- below that, too
-  // many markers are on screen at once for permanent text to stay
-  // readable. worldInfo.labelMinZoom (tile-zoom numbering) is the single
-  // source of truth, set alongside ASCII_ZOOM_LEVELS in zoomconfig.py.
-  const labelMinZoom = toLeafletZoom(worldInfo.labelMinZoom);
-  let labelsEnabled = false;
+  // The checkbox starts checked in index.html (matching the old site,
+  // which always showed marker labels) -- match that initial state
+  // explicitly, same reasoning as ui.routeLinesToggle below: rendering
+  // "checked" in HTML doesn't itself fire the "change" listener that
+  // actually applies the effect.
+  let labelsEnabled = ui.labelToggle.checked;
 
   for (const entry of entries) {
     entry.marker = L.marker(worldCellCenter(entry.x, entry.y), { icon: typeIcon(entry.type) })
-      .bindPopup(entry.html)
+      .bindPopup(entry.html + PERMALINK_HTML)
       .bindTooltip(entry.name, {
         permanent: true, direction: "right", offset: [8, 0], className: "loc-label", interactive: true,
       });
+    // (Re)set the permalink icon's target every time this popup opens --
+    // it depends on the current zoom, which can change between opens.
+    // Same reused-DOM-element situation as the tooltip above (the popup's
+    // element persists across opens/closes too), but assigning .onclick
+    // (a single slot) rather than addEventListener needs no extra
+    // bound-once guard to avoid piling up duplicate listeners.
+    entry.marker.on("popupopen", () => {
+      const link = entry.marker.getPopup()?.getElement()?.querySelector(".popup-permalink-link");
+      if (!link) return;
+      link.href = buildLocationLink(entry.x, entry.y, map.getZoom());
+      link.onclick = (ev) => {
+        ev.preventDefault();
+        copyLink(link.href, toast);
+      };
+    });
     // Leaflet auto-opens a "permanent" tooltip the instant its marker is
     // actually attached to the map -- and MarkerClusterGroup defers that
     // attachment internally, so there's no reliable single point in our
@@ -258,18 +286,23 @@ export async function initMarkers(map, worldInfo, ui, collapseState) {
     if (!typeState[entry.type]) return false;
     if (entry.continentId && continentState[entry.continentId] === false) return false;
     if (searchQuery && !entry.name.toLowerCase().includes(searchQuery)) return false;
+    // Tradelane waypoints are tied to the "Trade lane routes" toggle too,
+    // not just their own type filter chip -- turning the routes (the
+    // connecting lines) off but leaving the waypoint dots/labels on-screen
+    // would read as "trade lanes" only being half turned off.
+    if (entry.type === "tradelane" && !ui.routeLinesToggle.checked) return false;
     return true;
   }
 
   // Clicking a cluster normally zooms in to spread its members apart at
   // their real positions (rather than spiderfying them, which only kicks
   // in for markers so close together that no amount of zooming would ever
-  // separate them) -- but at the zoom that lands on, they're still well
-  // below labelMinZoom, so without help they show up as a handful of
-  // unlabeled, hard-to-tell-apart circles. clusterclick fires for every
-  // cluster click before Leaflet decides whether to zoom or spiderfy, and
-  // getAllChildMarkers() recurses through any nested sub-clusters too, so
-  // this covers the reveal either way.
+  // separate them) -- but if the "Marker labels" toggle happens to be off,
+  // they'd land there as a handful of unlabeled, hard-to-tell-apart circles
+  // with no way to tell them apart short of clicking each one. clusterclick
+  // fires for every cluster click before Leaflet decides whether to zoom or
+  // spiderfy, and getAllChildMarkers() recurses through any nested
+  // sub-clusters too, so this covers the reveal either way.
   //
   // These forced labels should go away again once the user moves on --
   // but "moves on" specifically means *after* whatever pan/zoom the click
@@ -315,9 +348,31 @@ export async function initMarkers(map, worldInfo, ui, collapseState) {
     updateLabels();
   });
 
+  // Whether entry's marker is currently rendered as its own individual pin
+  // rather than absorbed into a cluster bubble (or not on the map at all).
+  // getVisibleParent() walks a marker's cluster-tree ancestry up to the
+  // first node that actually has an on-screen icon -- that's the marker
+  // itself if it's shown standalone, a cluster if it's currently grouped,
+  // or null if nothing in its ancestry is visible (e.g. filtered out).
+  function isIndividuallyShown(entry) {
+    return clusterGroup.getVisibleParent(entry.marker) === entry.marker;
+  }
+
   function wantsLabel(entry) {
     if (spiderfiedMarkers.has(entry.marker) || forcedLabelMarkers.has(entry.marker)) return true;
-    return labelsEnabled && map.getZoom() >= labelMinZoom && isVisible(entry);
+    if (!isVisible(entry)) return false;
+    // Tradelane waypoint labels are always shown once the waypoint itself
+    // is individually visible, independent of the "Marker labels" toggle --
+    // this is how the old site's tradelane markers behaved too: every
+    // marker there always carried a permanent label.
+    if (entry.type === "tradelane") return isIndividuallyShown(entry);
+    // Every other type's label just follows its own marker -- once it's
+    // shown as its own pin (not merged into a cluster) and the "Marker
+    // labels" toggle is on, show its label too. There's no separate zoom
+    // threshold beyond that -- clustering itself is what keeps a crowded
+    // "far away" zoom from being swamped with permanent text, the same way
+    // it already keeps it from being swamped with individual dots.
+    return labelsEnabled && isIndividuallyShown(entry);
   }
 
   function reconcileLabel(entry) {
@@ -379,12 +434,20 @@ export async function initMarkers(map, worldInfo, ui, collapseState) {
   ui.routeLinesToggle.addEventListener("change", () => {
     if (ui.routeLinesToggle.checked) routeLinesGroup.addTo(map);
     else map.removeLayer(routeLinesGroup);
+    // Tradelane waypoint markers/labels are tied to this same toggle (see
+    // isVisible() above) -- re-run the filter pass so they show/hide with
+    // the lines instead of only on the next unrelated filter change.
+    applyFilters();
   });
 
   ui.labelToggle.addEventListener("change", () => {
     labelsEnabled = ui.labelToggle.checked;
     updateLabels();
   });
+  // Zooming changes clustering (markers merge into/out of cluster bubbles)
+  // without necessarily changing which entries pass isVisible() -- labels
+  // need reconciling either way, since wantsLabel() depends on whether a
+  // marker is currently shown individually (see isIndividuallyShown()).
   map.on("zoomend", updateLabels);
 
   ui.search.addEventListener("input", () => {
@@ -395,7 +458,21 @@ export async function initMarkers(map, worldInfo, ui, collapseState) {
   recomputeContinentStack = buildLocationList(ui.locationList, entries, continentItems, map, clusterGroup, collapseState);
   applyFilters();
 
-  return { entries, map };
+  // Opens the popup of whichever entry sits at exact world coords (x, y),
+  // if any -- used for deep links whose x/y happen to match a location
+  // marker (see app.js), same as the old site's pmapGetMarkerIndexByCoords
+  // + pmapMyClick did on load. zoomToShowLayer un-clusters/spiderfies as
+  // needed first; if the marker's already visible (the common case, since
+  // a link is normally made while its popup is open) it just opens the
+  // popup without moving the view.
+  function openAt(x, y) {
+    const entry = entries.find((e) => e.x === x && e.y === y);
+    if (!entry) return false;
+    clusterGroup.zoomToShowLayer(entry.marker, () => entry.marker.openPopup());
+    return true;
+  }
+
+  return { entries, map, openAt };
 }
 
 /**

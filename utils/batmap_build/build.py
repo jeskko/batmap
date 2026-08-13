@@ -27,7 +27,7 @@ from . import render, tiles
 from .legend import LOCATION_TYPE_LEGEND
 from .mapfile import read_map
 from .world import MAP_CONTINENTS, WORLD_OX, WORLD_OY, WORLD_W, WORLD_H
-from .zoomconfig import ASCII_ZOOM_LEVELS, LABEL_MIN_ZOOM, MAX_ZOOM, MIN_ZOOM, zoom_to_pyramid_index
+from .zoomconfig import ASCII_ZOOM_LEVELS, MAX_ZOOM, MIN_ZOOM, zoom_to_pyramid_index
 
 # ASCII/text-map glyph font. Vendored here (not read from the extern/
 # checkout) so the build doesn't depend on whatever font happens to ship
@@ -139,7 +139,6 @@ def build(maputils_dir: Path, out_dir: Path, force: bool = False, with_ascii: bo
     world_json = {
         "ox": WORLD_OX, "oy": WORLD_OY, "w": WORLD_W, "h": WORLD_H,
         "minZoom": MIN_ZOOM, "maxZoom": MAX_ZOOM,
-        "labelMinZoom": LABEL_MIN_ZOOM,
         "asciiZoomLevels": ASCII_ZOOM_LEVELS if with_ascii else [],
         "locationTypes": {
             key: {"label": info.label, "color": info.color, "emoji": info.emoji}

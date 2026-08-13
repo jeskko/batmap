@@ -106,10 +106,15 @@ a { color: inherit; }
 }
 
 .icon-button {
-  display: none;
-  flex-direction: column;
+  /* Visible on every viewport width, not just narrow ones -- desktop can
+     collapse the sidebar too now (see .sidebar.is-collapsed below), so the
+     button that drives it needs to be reachable there as well. Centers
+     whichever single icon is actually visible (see the two icon groups
+     below and their media queries) rather than assuming it's always the
+     3-bar hamburger stack. */
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 4px;
   width: 36px;
   height: 36px;
   background: none;
@@ -118,11 +123,36 @@ a { color: inherit; }
   padding: 0;
 }
 
-.icon-button span {
+/* Mobile-only hamburger -- see the max-width query further down for where
+   it's actually shown; hidden by default since desktop shows the
+   fullscreen icons below instead. */
+.icon-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+.icon-hamburger span {
   display: block;
   height: 2px;
   background: var(--color-text-light);
   border-radius: 1px;
+}
+
+/* Desktop-only fullscreen expand/exit icons -- see the min-width query
+   further down for where one of the two is actually shown. */
+.icon-fullscreen {
+  display: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-text-light);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---------- Layout ---------- */
@@ -217,6 +247,80 @@ a { color: inherit; }
   position: relative;
   isolation: isolate;
   z-index: 10;
+  /* Desktop-collapse transition (see .is-collapsed below) -- the mobile
+     overlay's own transform transition is set separately, inside the
+     max-width query, since it animates a different property. */
+  transition: flex-basis 0.25s ease, width 0.25s ease;
+}
+
+/* Desktop: sidebar is a normal flex layout item, visible by default --
+   collapsing it hides it entirely so #map (flex: 1 1 auto) reclaims the
+   space, rather than just sliding it off-canvas like the mobile overlay
+   below (there's nothing to slide *under* here, since desktop has no
+   overlay -- the sidebar and #map are side-by-side). */
+.sidebar.is-collapsed {
+  flex-basis: 0;
+  width: 0;
+  box-shadow: none;
+}
+
+/* Collapsing the sidebar on desktop doubles as a "pseudo fullscreen" mode
+   (see app.js's setupSidebarToggle) -- the header/footer bars disappear
+   too, leaving just the hamburger button (still a sibling of the rest of
+   .site-header's content, not display:none itself) as the way back out.
+   Guarded to desktop widths explicitly, not just by app.js only ever
+   setting body.is-fullscreen there -- otherwise resizing down to mobile
+   without clicking the button again would leave these bars hidden there
+   too, where the sidebar becomes an overlay instead and there's nothing
+   for collapsing it to have reclaimed. */
+@media (min-width: 861px) {
+  /* Desktop: fullscreen expand icon by default (sidebar starts open,
+     clicking collapses it -- see app.js), switching to the exit/compress
+     icon once body.is-fullscreen is set. */
+  .icon-fullscreen--enter { display: block; }
+  body.is-fullscreen .icon-fullscreen--enter { display: none; }
+  body.is-fullscreen .icon-fullscreen--exit { display: block; }
+
+  body.is-fullscreen .site-header {
+    /* position: fixed (not just a shorter height) takes it out of body's
+       flex flow entirely, the same way an absolutely-positioned flex item
+       would -- .layout expands to the full viewport height as if the
+       header weren't there, and #map ends up rendered underneath this bar
+       instead of the bar reserving its own solid strip above the map. */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 0.5em;
+    background: none;
+    box-shadow: none;
+    /* The bar's own (now transparent, but still full-width) box would
+       otherwise still catch clicks/drags meant for the map tiles now
+       showing through it -- let those pass through everywhere except the
+       one button that actually needs to stay clickable. */
+    pointer-events: none;
+  }
+
+  body.is-fullscreen .site-header #sidebar-toggle {
+    pointer-events: auto;
+    /* The button's light bars need to read against whatever terrain color
+       happens to be underneath now, not just the header's old dark wood
+       background -- same translucent-dark pill every other header/footer
+       button already uses (see .button, #make-link above). */
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 0.3em;
+  }
+
+  body.is-fullscreen .site-header .logo,
+  body.is-fullscreen .site-header .titles,
+  body.is-fullscreen .site-header #make-link {
+    display: none;
+  }
+
+  body.is-fullscreen .site-footer {
+    display: none;
+  }
 }
 
 .sidebar-scroll {
@@ -488,6 +592,22 @@ a { color: inherit; }
 
 .leaflet-tooltip.loc-label::before { display: none; }
 
+/* Permalink icon appended to every popup (see markers.js's PERMALINK_HTML)
+   -- copies a link straight back to this location, which re-opens the same
+   popup automatically on load (app.js's deep-link handling + openAt()). */
+.popup-permalink {
+  margin-top: 0.4em;
+  text-align: right;
+}
+
+.popup-permalink-link {
+  text-decoration: none;
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.popup-permalink-link:hover { opacity: 1; }
+
 .player-marker-icon {
   border-radius: 50%;
   border: 2px solid var(--color-accent);
@@ -521,6 +641,14 @@ a { color: inherit; }
   white-space: nowrap;
 }
 
+.source-link img {
+  /* inline-flex centered the icon+text box on its own content instead of
+     the surrounding line -- vertical-align: middle lines the icon up with
+     the adjacent text's baseline the way a plain inline image does. */
+  vertical-align: middle;
+  margin-right: 0.3em;
+}
+
 /* ---------- Toast ---------- */
 
 .toast {
@@ -549,7 +677,9 @@ a { color: inherit; }
 @media (max-width: 860px) {
   :root { --header-height: 64px; }
 
-  .icon-button { display: flex; }
+  /* Mobile: hamburger only -- its sidebar is a hidden-by-default drawer,
+     the icon a fullscreen expand/exit pair would be the wrong metaphor for. */
+  .icon-hamburger { display: flex; }
 
   .site-header .subtitle { display: none; }
   .site-header .logo img { height: 40px; }
