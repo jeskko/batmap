@@ -1,10 +1,15 @@
 /*
  * Location markers, tradelanes, filters, labels and the sidebar location list.
  *
- * Marker "type" is derived client-side from the LOCF_* flags bitmask,
- * exactly like the old site's markers.js (pmapLocGetLocationType) -- the
+ * Marker "type" is derived client-side from the LOCF_* flags bitmask, the
+ * same way the old site's markers.js (pmapLocGetLocationType) did -- the
  * JSON data only carries the raw flags, matching mkloc's actual GMaps JSON
- * output (see utils/batmap_build/markers.py). Tradelane waypoints (loaded
+ * output (see utils/batmap_build/markers.py). One flag has since drifted
+ * from that old (frozen, LOC format v5.0-era) reference on purpose: 'c'
+ * (major city) moved from a marker-type bit to a location-type one in
+ * upstream's v5.1, so locationType() below follows the current
+ * liblocfile.h/mkloc.c instead of the old site's stale grouping for that
+ * one case -- see LOCF_T_CITY below. Tradelane waypoints (loaded
  * separately, from data/tradelane.json) are folded into the same `entries`
  * list with a synthetic type: "tradelane" so they get a type filter chip,
  * clustering and search/list treatment for free instead of being a special
@@ -21,7 +26,6 @@ import { makeCollapsible } from "./collapsible.js";
 
 const LOCF_M_MASK = 0x0000f;
 const LOCF_M_PCITY = 0x00004;
-const LOCF_M_CITY = 0x00008;
 const LOCF_T_MASK = 0x0fff0;
 const LOCF_T_SHRINE = 0x00010;
 const LOCF_T_GUILD = 0x00020;
@@ -29,6 +33,14 @@ const LOCF_T_SS = 0x00040;
 const LOCF_T_MONSTER = 0x00080;
 const LOCF_T_TRAINER = 0x00100;
 const LOCF_T_FORT = 0x00200;
+// 'c' (major city) moved from the marker-type group to the location-type
+// group in LOC format v5.1 -- upstream's own words: "Major city 'c' flag
+// is no longer a marker type, but a location type." Before that, a
+// location couldn't be both a scenic marker and a major city at once;
+// now it can (e.g. Laenor's Dortlewall/Pleasantville, flags "1?c"/"2?c"),
+// which is exactly why this needs its own independent bit here rather
+// than living in LOCF_M_MASK alongside the mutually-exclusive markers.
+const LOCF_T_CITY = 0x00400;
 
 // Label/color/emoji per location type is configured server-side in
 // legend.py's LOCATION_TYPE_LEGEND and shipped via world.json's
@@ -46,7 +58,6 @@ const CONTINENT_COLORS = {
 function locationType(flags, name) {
   if (name.startsWith("FERRY")) return "ferry";
   const m = flags & LOCF_M_MASK;
-  if (m === LOCF_M_CITY) return "city";
   if (m === LOCF_M_PCITY) return "pcity";
   switch (flags & LOCF_T_MASK) {
     case LOCF_T_SHRINE: return "shrine";
@@ -55,6 +66,7 @@ function locationType(flags, name) {
     case LOCF_T_MONSTER: return "monster";
     case LOCF_T_TRAINER: return "trainer";
     case LOCF_T_FORT: return "fort";
+    case LOCF_T_CITY: return "city";
     default: return "default";
   }
 }
