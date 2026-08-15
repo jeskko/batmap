@@ -1,5 +1,5 @@
 """
-Parser for maputils' `.loc` file format (version 5.0), as documented in
+Parser for maputils' `.loc` file format (version 5.1), as documented in
 extern/maputils/README.loc and implemented in extern/maputils/src/liblocfile.c.
 
 This is a from-scratch character-level parser mirroring liblocfile.c's state
@@ -15,8 +15,19 @@ known locations to flag new/moved locations) -- that's an authoring aid used
 interactively by maputils maintainers, not part of the JSON-export path that
 tools/makegmaps.php actually drives, so LOCF_INVALID/LOCF_NOMARKER/
 LOCF_MAPCHAR never get set in that pipeline and we don't need them either.
+
+v5.0 -> v5.1 (README.loc's own changelog): the 'c' (major city) flag moved
+from being a marker type (mutually exclusive with scenic/pcity markers) to
+a location type (independent of them) -- upstream's own words: "Major city
+'c' flag is no longer a marker type, but a location type." That's why
+LOCF_T_CITY lives in the T (location-type) group below rather than the M
+(marker) group; a location can now legitimately be both a scenic marker and
+a major city at once (e.g. Laenor's Dortlewall/Pleasantville, flags "1?c"/
+"2?c"), which the old mutually-exclusive M-group grouping couldn't express.
 """
 
+import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -24,7 +35,6 @@ from pathlib import Path
 LOCF_M_SCENIC1 = 0x000001   # '?' Scenic
 LOCF_M_SCENIC2 = 0x000002   # '%' Shrine scenic
 LOCF_M_PCITY   = 0x000004   # 'C' Player city
-LOCF_M_CITY    = 0x000008   # 'c' Major city
 LOCF_M_MASK    = 0x00000F
 
 # Location types (mutually exclusive within this group)
@@ -34,6 +44,7 @@ LOCF_T_SS      = 0x000040   # 'P' Player guild/secret society
 LOCF_T_MONSTER = 0x000080   # 'M' Special monster
 LOCF_T_TRAINER = 0x000100   # 'T' Guild-related trainer
 LOCF_T_FORT    = 0x000200   # 'F' Regional fort
+LOCF_T_CITY    = 0x000400   # 'c' Major city (moved here in v5.1, see above)
 LOCF_T_MASK    = 0x00FFF0
 
 # Extra flags
@@ -41,10 +52,17 @@ LOCF_INVIS     = 0x010000   # '-' Invisible marker / don't show label
 LOCF_CLOSED    = 0x020000   # '!' Location is CLOSED
 LOCF_INSTANCED = 0x040000   # 'I' Location is "instanced"
 
-_MARKER_FLAG_CHARS = {"?": LOCF_M_SCENIC1, "%": LOCF_M_SCENIC2, "C": LOCF_M_PCITY, "c": LOCF_M_CITY}
+_MARKER_FLAG_CHARS = {"?": LOCF_M_SCENIC1, "%": LOCF_M_SCENIC2, "C": LOCF_M_PCITY}
 _TYPE_FLAG_CHARS = {"S": LOCF_T_SHRINE, "G": LOCF_T_GUILD, "P": LOCF_T_SS,
-                    "M": LOCF_T_MONSTER, "T": LOCF_T_TRAINER, "F": LOCF_T_FORT}
+                    "M": LOCF_T_MONSTER, "T": LOCF_T_TRAINER, "F": LOCF_T_FORT,
+                    "c": LOCF_T_CITY}
 _EXTRA_FLAG_CHARS = {"-": LOCF_INVIS, "!": LOCF_CLOSED, "I": LOCF_INSTANCED}
+
+# Mirrors liblocfile.h's own LOC_VERSION_MAJOR/MINOR -- what this parser was
+# actually last checked against and updated for.
+LOC_VERSION_MAJOR = 5
+LOC_VERSION_MINOR = 1
+_VERSION_HEADER_RE = re.compile(r"MapUtils LOC file \(version (\d+)\.(\d+)\)")
 
 NAME_ORIG = 0x00001         # '@' prefix on a name subfield
 
@@ -289,11 +307,43 @@ def _parse_record(text: str, i: int, n: int) -> tuple[LocMarker, int]:
     return marker, i
 
 
+def _check_version_header(comment_line: str, path: Path) -> None:
+    """
+    Mirrors liblocfile.c's own version-header check (which also only ever
+    inspects the very first comment line, "because loc file identification
+    should be the first comment line"): a major-version mismatch means this
+    parser's flag/field assumptions may no longer hold at all, so it's a
+    hard error, same as upstream refusing to read the file; a minor-version
+    mismatch is only logged, matching upstream's own "does not change the
+    format per se" treatment -- but it's still worth a look, since that's
+    exactly the kind of bump that introduced the v5.0->v5.1 'c' flag change
+    documented above.
+    """
+    match = _VERSION_HEADER_RE.search(comment_line)
+    if not match:
+        return  # not every file necessarily leads with the version comment
+    major, minor = int(match.group(1)), int(match.group(2))
+    if major != LOC_VERSION_MAJOR:
+        raise LocParseError(
+            f"{path}: LOC file format version {major}.{minor} detected, this parser "
+            f"understands {LOC_VERSION_MAJOR}.{LOC_VERSION_MINOR} -- refusing to parse, "
+            "it likely needs updating for the new format first."
+        )
+    if minor != LOC_VERSION_MINOR:
+        print(
+            f"warning: {path}: LOC file format version {major}.{minor} detected, "
+            f"this parser was last updated for {LOC_VERSION_MAJOR}.{LOC_VERSION_MINOR} -- "
+            "proceeding, but check README.loc's changelog for anything semantic.",
+            file=sys.stderr,
+        )
+
+
 def parse_loc_file(path: Path) -> list[LocMarker]:
     text = path.read_text(encoding="iso-8859-1")
     n = len(text)
     i = 0
     records: list[LocMarker] = []
+    version_checked = False
 
     while i < n:
         ch = text[i]
@@ -301,8 +351,12 @@ def parse_loc_file(path: Path) -> list[LocMarker]:
             i += 1
             continue
         if ch == "#":
+            line_start = i
             while i < n and text[i] not in "\r\n":
                 i += 1
+            if not version_checked:
+                version_checked = True
+                _check_version_header(text[line_start:i], path)
             continue
         if ch.isdigit():
             marker, i = _parse_record(text, i, n)

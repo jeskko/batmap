@@ -19,7 +19,6 @@ from .locfile import LOCF_INVIS, LOCF_M_MASK, LOCF_T_MASK, LOCF_CLOSED, AUTHOR_O
 from .world import MAP_CONTINENTS, TRADELANE_POINTS, TRADELANE_DEFS, get_continent, to_global
 
 _TYPE_PREFIXES = {
-    locfile.LOCF_M_CITY: "CITY",
     locfile.LOCF_M_PCITY: "PCITY",
 }
 _TYPE_PREFIXES_T = {
@@ -29,6 +28,9 @@ _TYPE_PREFIXES_T = {
     locfile.LOCF_T_MONSTER: "MOB",
     locfile.LOCF_T_TRAINER: "TRAINER",
     locfile.LOCF_T_FORT: "FORT",
+    # 'c' (major city) moved from the M-group to here in LOC format v5.1 --
+    # see locfile.py's module docstring for why.
+    locfile.LOCF_T_CITY: "CITY",
 }
 
 _AUTHOR_ROLE_SUFFIX = {
@@ -53,7 +55,7 @@ def _quest_linkify(text: str) -> str:
     def repl(m: re.Match) -> str:
         name = m.group(1)
         slug = "+".join(name.lower().split())
-        return f'<a target="_blank" href="http://www.bat.org/help/quests?str={slug}">{m.group(0)}</a>'
+        return f'<a target="_blank" href="https://www.bat.org/help/quests?str={slug}">{m.group(0)}</a>'
     return _QUEST_RE.sub(repl, text)
 
 
