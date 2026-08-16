@@ -34,6 +34,7 @@ async function main() {
   setupAsciiLayerToggle(map, asciiLayer, asciiToggle, worldInfo.asciiZoomLevels || []);
 
   setupCursorReadout(map, worldInfo, document.getElementById("cursor-readout"));
+  setupBuildStamps(worldInfo);
   setupMakeLink(map, document.getElementById("make-link"), showToast, {
     routes: ui.routeLinesToggle, labels: ui.labelToggle, ascii: asciiToggle,
   }, () => ({ collapsed: collapseState.toArray().join(",") }));
@@ -63,6 +64,34 @@ async function fetchJson(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
+}
+
+/**
+ * Footer "Map data updated" / "Site updated" stamps -- two independent
+ * dates, deliberately not the same thing: "Map data updated" (world.json's
+ * mapDataUpdated, set by build.py from extern/maputils' own tip revision)
+ * only moves when a `make fetch-data` actually pulls new upstream commits;
+ * "Site updated" (data/site_updated.json, written by the `make install`
+ * Makefile target itself) moves on every deploy, including a JS/CSS-only
+ * change with no new map data at all. Each span is filled in with its own
+ * leading "· " (see index.html) so a missing value -- no hg checkout, or
+ * this build was never actually `make install`ed anywhere -- just leaves
+ * that span empty instead of a dangling separator.
+ */
+async function setupBuildStamps(worldInfo) {
+  const mapDataEl = document.getElementById("map-data-updated");
+  if (worldInfo.mapDataUpdated) {
+    mapDataEl.textContent = `· Map data updated: ${worldInfo.mapDataUpdated}`;
+  }
+
+  const siteEl = document.getElementById("site-updated");
+  try {
+    const { date } = await fetchJson("data/site_updated.json");
+    if (date) siteEl.textContent = `· Site updated: ${date}`;
+  } catch {
+    // Not fetched via `make install` yet (e.g. a bare `make render`) --
+    // leave the span empty rather than failing page load over footer trivia.
+  }
 }
 
 function showToast(message) {
