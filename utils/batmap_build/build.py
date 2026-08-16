@@ -18,6 +18,7 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -45,6 +46,31 @@ FONT_PATH = Path(__file__).resolve().parent.parent / "vendor" / "NotoMonoNerdFon
 
 def _newest_mtime(paths: list[Path]) -> float:
     return max((p.stat().st_mtime for p in paths if p.exists()), default=0.0)
+
+
+def _maputils_last_commit_date(maputils_dir: Path) -> str | None:
+    """
+    The date of extern/maputils' current tip revision ("YYYY-MM-DD") -- i.e.
+    when the upstream game-world data was actually last changed, not just
+    when we happened to last run `make fetch-data`. This only changes when
+    a `hg pull` actually brings in new commits, so the frontend's "Map data
+    updated" stamp (see world_json below) updates itself automatically
+    exactly when it should, with no separate stamp-file bookkeeping needed.
+
+    Returns None (rather than raising) if extern/maputils isn't an hg
+    checkout or the `hg` binary isn't available -- this is display-only
+    metadata, not worth failing the whole build over.
+    """
+    if not (maputils_dir / ".hg").is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            ["hg", "log", "-r", ".", "--template", "{date|shortdate}"],
+            cwd=maputils_dir, capture_output=True, text=True, timeout=10, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() or None
 
 
 def build(maputils_dir: Path, out_dir: Path, force: bool = False, with_ascii: bool = True) -> None:
@@ -140,6 +166,10 @@ def build(maputils_dir: Path, out_dir: Path, force: bool = False, with_ascii: bo
         "ox": WORLD_OX, "oy": WORLD_OY, "w": WORLD_W, "h": WORLD_H,
         "minZoom": MIN_ZOOM, "maxZoom": MAX_ZOOM,
         "asciiZoomLevels": ASCII_ZOOM_LEVELS if with_ascii else [],
+        # null if extern/maputils isn't an hg checkout (e.g. hg not
+        # installed) -- the frontend just omits the "Map data updated"
+        # footer line entirely in that case (see app.js).
+        "mapDataUpdated": _maputils_last_commit_date(maputils_dir),
         "locationTypes": {
             key: {"label": info.label, "color": info.color, "emoji": info.emoji}
             for key, info in LOCATION_TYPE_LEGEND.items()

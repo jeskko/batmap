@@ -70,6 +70,13 @@ install: render
 	rsync -a --delete $(BUILD_DIR)/tiles/       $(TILES_DIR)/
 	rsync -a --delete $(BUILD_DIR)/tiles-ascii/  $(ASCII_TILES_DIR)/
 	rsync -a --delete $(BUILD_DIR)/data/         $(DATA_DIR)/
+	# "Site updated" (the footer's other timestamp, alongside world.json's
+	# data-driven "Map data updated") -- deliberately stamped here rather
+	# than by build.py: it's meant to track an actual deploy via `make
+	# install`, not just a local `make render` that never gets installed
+	# anywhere. Written after the data/ rsync above so it isn't immediately
+	# wiped by that same --delete.
+	echo "{\"date\": \"$$(date -u +%Y-%m-%d)\"}" > $(DATA_DIR)/site_updated.json
 
 clean:
 	rm -rf $(BUILD_DIR)

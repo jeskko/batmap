@@ -85,9 +85,20 @@
 
 <footer class="site-footer">
   <span id="cursor-readout" class="cursor-readout"></span>
+  <!-- Two clusters, credit+freshness paired with its own subject rather than
+       both freshness stamps tacked on at the end: (map data attribution +
+       when the data itself was last refreshed), then (rendering credit +
+       when this deploy last ran), then the legal/repo links. The two
+       "#map-data-updated"/"#site-updated" spans are filled in by app.js,
+       each including its own leading "· " -- left empty in markup (rather
+       than a static "· " here) so a missing value (e.g. no site_updated.json
+       yet, or extern/maputils not an hg checkout) doesn't leave a dangling
+       separator with nothing after it; every *other* segment here is always
+       present, so it keeps its own hardcoded "· " as before. -->
   <span class="copyrights">
-    Map data by BAT ry, Ggr, Slobber &amp; Jeskko · rendered with
-    <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
+    Map data by BAT ry, Ggr, Slobber &amp; Jeskko <span id="map-data-updated"></span>
+    · rendered with
+    <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> <span id="site-updated"></span>
     · <a href="privacy.html">Privacy Policy</a>
     · <a class="source-link" href="https://github.com/jeskko/batmap" target="_blank" rel="noopener">
       <img src="vendor/octicons/mark-github.svg" alt="GitHub" width="14" height="14"> Source
